@@ -2,7 +2,7 @@ import pandas as pd
 import networkx as nx
 
 def make_centrality_frame(graph_path):
-    """Take a simple graph text file returns a DataFrame with two basic centrality measures: degree and betweenness.
+    """Take a simple graph text file returns an nx Graph and a DataFrame with two basic centrality measures: degree and betweenness.
 
     This function is to be used as a helper to get a user up and running.
     The input file is of the form:
@@ -48,4 +48,4 @@ def make_centrality_frame(graph_path):
     df.index.names = ['NODE']
     df = df.sort_index()
 
-    return df
+    return G, df
