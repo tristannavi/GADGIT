@@ -24,7 +24,7 @@ toolbox.register("indices", random.sample, range(GENE_COUNT), COM_SIZE)
 toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-def evalKnapsack(individual):
+def single_eval(individual):
     assert len(individual) == COM_SIZE, 'Indiv does not match community size in eval'
 
     fit_sum = 0.0
@@ -67,11 +67,11 @@ def mutFlipper(individual):
 
     return individual,
 
-toolbox.register("evaluate", evalKnapsack)
+toolbox.register("evaluate", single_eval)
 toolbox.register("mate", cxSDB)
 toolbox.register("mutate", mutFlipper)
 
-def main():
+def ga_single():
     NGEN = 100
     NPOP = 25
     CXPB = 0.75
@@ -88,9 +88,9 @@ def main():
     algorithms.eaSimple(pop, toolbox, CXPB, MUTPB, NGEN, stats, halloffame=hof)
     
     return pop, stats, hof
-                 
+
 if __name__ == "__main__":
-    pop, stats, hof = main()
+    pop, stats, hof = ga_single()
     elite = hof[0]
     print('Size: ', len(elite))
     buf = 'Index in elite: '
