@@ -9,6 +9,8 @@ from deap import base
 from deap import creator
 from deap import tools
 
+from GAInfo import GAInfo
+
 data_frame = pd.read_pickle(sys.argv[1])
 
 COM_SIZE = 100
@@ -71,24 +73,19 @@ toolbox.register("evaluate", single_eval)
 toolbox.register("mate", cxSDB)
 toolbox.register("mutate", mutFlipper)
 
-def ga_single():
-    NGEN = 100
-    NPOP = 25
-    CXPB = 0.75
-    MUTPB = 0.25
-    NK = 3
-    
-    toolbox.register("select", tools.selTournament, tournsize=NK)
-    pop = toolbox.population(n=NPOP)
+def ga_single(ga_info):
+    toolbox.register("select", tools.selTournament, tournsize=ga_info.nk)
+    pop = toolbox.population(n=ga_info.pop)
     hof = tools.HallOfFame(1)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register("avg", np.mean, axis=0)
     stats.register("max", np.max, axis=0)
     
-    algorithms.eaSimple(pop, toolbox, CXPB, MUTPB, NGEN, stats, halloffame=hof)
+    algorithms.eaSimple(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen, stats, halloffame=hof)
     
     return pop, stats, hof
 
 if __name__ == "__main__":
-    pop, stats, hof = ga_single()
-    post_run(None, None, pop, stats, hof)
+    ga_info = GAInfo(generation=10)
+    pop, stats, hof = ga_single(ga_info)
+    post_run(None, ga_info, pop, stats, hof)
