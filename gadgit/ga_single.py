@@ -91,18 +91,4 @@ def ga_single():
 
 if __name__ == "__main__":
     pop, stats, hof = ga_single()
-    elite = hof[0]
-    print('Size: ', len(elite))
-    buf = 'Index in elite: '
-    for ind in sorted(list(elite)):
-        buf += str(ind) + ', '
-    print(buf)
-    buf = 'Genes in elite: '
-    for ind in sorted(list(elite)):
-        buf += data_frame.iloc[ind]['GeneName'] + ', '
-    print(buf)
-    print('Nodes exloration count: ')
-    print(FRONTIER)
-    missed_nodes = [data_frame.iloc[ind]['GeneName'] for ind, x in enumerate(FRONTIER) if x == 0]
-    print('Nodes never explored (bad): N =', len(missed_nodes))
-    print(', '.join(missed_nodes))
+    post_run(None, None, pop, stats, hof)
