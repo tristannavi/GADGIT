@@ -21,6 +21,7 @@ def single_eval(gene_info, individual):
     """
 
     assert len(individual) == gene_info.com_size, 'Indiv does not match community size in eval'
+    assert set(gene_info.fixed_list_ids).issubset(individual), 'Indiv does not possess all fixed genes'
 
     fit_col = gene_info.obj_list[0]
     fit_sum = 0.0
@@ -69,6 +70,14 @@ def mutFlipper(gene_info, individual):
 
     return individual,
 
+def indiv_builder(gene_info):
+    """Implementation of forcing fixed genes in creation of new individual."""
+    num_choices = gene_info.com_size - len(gene_info.fixed_list)
+    valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_ids))
+    base_indiv = random.sample(valid_choices, num_choices)
+    base_indiv.extend(gene_info.fixed_list_ids)
+    return base_indiv
+
 def ga_single(gene_info, ga_info):
     """Main loop which sets DEAP objects and calls EA algorithm.
     
@@ -92,7 +101,7 @@ def ga_single(gene_info, ga_info):
     creator.create("Individual", set, fitness=creator.Fitness)
 
     toolbox = base.Toolbox()
-    toolbox.register("indices", random.sample, range(gene_info.gene_count), gene_info.com_size)
+    toolbox.register("indices", indiv_builder, gene_info)
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", single_eval, gene_info)
