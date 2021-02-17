@@ -10,11 +10,14 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = [ ]
+requirements = ['numpy', 'pandas']
 
-setup_requirements = [ ]
+setup_requirements = ['numpy', 'pandas']
 
-test_requirements = [ ]
+test_requirements = ['numpy', 'pandas']
+
+import gadgit
+VER_STR = gadgit.__version__
 
 setup(
     author="Tyler Collins",
@@ -25,9 +28,6 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.5',
-        'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
     ],
@@ -43,6 +43,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/Andesha/gadgit',
-    version='0.1.0',
+    version=VER_STR,
     zip_safe=False,
 )
