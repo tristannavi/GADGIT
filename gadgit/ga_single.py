@@ -109,9 +109,3 @@ def ga_single(gene_info, ga_info):
     algorithms.eaSimple(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen, stats, halloffame=hof)
     
     return pop, stats, hof
-
-if __name__ == "__main__":
-    ga_info = GAInfo(generation=10)
-    gene_info = GeneInfo(sys.argv[1], ['Betweenness'])
-    pop, stats, hof = ga_single(gene_info, ga_info)
-    post_run(gene_info, ga_info, pop, stats, hof)
