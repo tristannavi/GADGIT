@@ -11,11 +11,6 @@ from deap import tools
 
 from GAInfo import GAInfo
 
-data_frame = pd.read_pickle(sys.argv[1])
-
-COM_SIZE = 100
-GENE_COUNT = data_frame.shape[0]
-
 FRONTIER = [0 for x in range(GENE_COUNT)]
 
 creator.create("Fitness", base.Fitness, weights=(1.0,))
@@ -69,11 +64,10 @@ def mutFlipper(individual):
 
     return individual,
 
-toolbox.register("evaluate", single_eval)
-toolbox.register("mate", cxSDB)
-toolbox.register("mutate", mutFlipper)
-
-def ga_single(ga_info):
+def ga_single(gene_info, ga_info):
+    toolbox.register("evaluate", single_eval)
+    toolbox.register("mate", cxSDB)
+    toolbox.register("mutate", mutFlipper)
     toolbox.register("select", tools.selTournament, tournsize=ga_info.nk)
     pop = toolbox.population(n=ga_info.pop)
     hof = tools.HallOfFame(1)
