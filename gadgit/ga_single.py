@@ -14,6 +14,12 @@ from GeneInfo import GeneInfo
 from post_run import post_run
 
 def single_eval(gene_info, individual):
+    """ Single objective summation of the centrality of a particular frame's chosen column.
+    
+    Due to gene_info.obj_list obviously accepting a list for the purposes of extending to MOP,
+    in the case of this single_eval, the head of the list is treated as the 'single' objective.
+    """
+
     assert len(individual) == gene_info.com_size, 'Indiv does not match community size in eval'
 
     fit_col = gene_info.obj_list[0]
@@ -25,30 +31,36 @@ def single_eval(gene_info, individual):
     return fit_sum, 
     
 def cxSDB(gene_info, ind1, ind2):
-    """SDB Crossover as defined in thesis."""
-    intersect = ind1.intersection(ind2) # New indivs start with intersection
+    """SDB Crossover
+    
+    Computes the intersection and asserts that after the intersection,
+    the amount of genes left over to 'deal' between two new individuals is even.
 
-    # Grab the other genes and shuffle them
+    Clears the set structures of their old information, updates with the intersection,
+    and lastly hands out half of the shuffled dealer to each indiv.
+
+    ind1 and ind2 and kept as objects since they inherit from set, but have additional properties.
+    """
+
+    # Build dealer
+    intersect = ind1.intersection(ind2)
     dealer = list(ind1.union(ind2) - intersect)
     random.shuffle(dealer)
-
     assert len(dealer) % 2 == 0, 'Dealer assumption on indiv crossover failure'
 
-    # Clear old sets
+    # Rebuild individuals and play out dealer
     ind1.clear()
     ind2.clear()
-
-    # Split list in half and assign to new indivs
     ind1.update(dealer[:len(dealer)//2])
     ind1.update(intersect)
     ind2.update(dealer[len(dealer)//2:])
     ind2.update(intersect)
-
     assert len(ind1) == gene_info.com_size and len(ind2) == gene_info.com_size, 'SDB created invalid individual'
     
     return ind1, ind2
 
 def mutFlipper(gene_info, individual):
+    """Flip based mutation. Flip one off to on, and one on to off."""
     assert len(individual) == gene_info.com_size, 'Mutation received invalid indiv'
     off_index = random.choice(list(set(range(0, gene_info.gene_count)) - individual))
     individual.remove(random.choice(sorted(tuple(individual))))
@@ -58,6 +70,24 @@ def mutFlipper(gene_info, individual):
     return individual,
 
 def ga_single(gene_info, ga_info):
+    """Main loop which sets DEAP objects and calls EA algorithm.
+    
+    Parameters
+    -------
+    gene_info, GeneInfo class
+        See respective class documentation.
+    ga_info, GAInfo class
+        See respective class documentation.
+
+    Returns
+    -------
+    pop, DEAP object
+    stats, DEAP object
+    hof, DEAP object
+
+    See post_run function for examples of how to interpret results.
+
+    """
     creator.create("Fitness", base.Fitness, weights=(1.0,))
     creator.create("Individual", set, fitness=creator.Fitness)
 
@@ -69,6 +99,7 @@ def ga_single(gene_info, ga_info):
     toolbox.register("mate", cxSDB, gene_info)
     toolbox.register("mutate", mutFlipper, gene_info)
     toolbox.register("select", tools.selTournament, tournsize=ga_info.nk)
+
     pop = toolbox.population(n=ga_info.pop)
     hof = tools.HallOfFame(1)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
