@@ -35,4 +35,4 @@ class GeneInfo:
     def __str__(self):
         """Return params as string."""
 
-        return "Frame path: {}\nGene Count: {}\nObjectives: {}\nCommunity {}\nFixed Genes: {}\n".format(self.frame_path, self.gene_count, self.obj_list, self.com_size, self.fixed_list)
+        return "Frame path: {}\nGene Count: {}\nObjectives: {}\nCommunity {}\nFixed Genes: {}".format(self.frame_path, self.gene_count, self.obj_list, self.com_size, self.fixed_list)

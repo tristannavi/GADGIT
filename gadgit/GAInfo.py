@@ -29,4 +29,4 @@ class GAInfo:
     def __str__(self):
         """Return params as string."""
 
-        return "Population: {}\nGeneration: {}\nCrossover: {}\nMutation: {}\nTournament: {}\n".format(self.gen, self.pop, self.cxpb, self.mutpb, self.nk)
+        return "Population: {}\nGeneration: {}\nCrossover: {}\nMutation: {}\nTournament: {}".format(self.gen, self.pop, self.cxpb, self.mutpb, self.nk)
