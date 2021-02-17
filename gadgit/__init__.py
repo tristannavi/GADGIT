@@ -7,3 +7,4 @@ __version__ = '0.1.2'
 from .GAInfo import GAInfo
 from .GeneInfo import GeneInfo
 from .ga_single import ga_single
+from .post_run import post_run
