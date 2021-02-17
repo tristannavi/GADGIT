@@ -25,3 +25,7 @@ def post_run(gene_info, ga_info, pop, stats, hof):
     missed_nodes = [gene_info.data_frame.iloc[ind]['GeneName'] for ind, x in enumerate(gene_info.frontier) if x == 0]
     print('Nodes never explored (bad): N =', len(missed_nodes))
     print(', '.join(missed_nodes))
+    print('Gene Info:')
+    print(gene_info)
+    print('GA Info')
+    print(ga_info)
