@@ -9,9 +9,9 @@ from deap import base
 from deap import creator
 from deap import tools
 
-from GAInfo import GAInfo
-from GeneInfo import GeneInfo
-from post_run import post_run
+from .GAInfo import GAInfo
+from .GeneInfo import GeneInfo
+from .post_run import post_run
 
 def single_eval(gene_info, individual):
     """ Single objective summation of the centrality of a particular frame's chosen column.
