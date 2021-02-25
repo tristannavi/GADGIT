@@ -26,22 +26,22 @@ Genetic Algorithm for Disease Gene Identification Toolbox
 Installation
 --------
 
-`pip install gadgit`
+:code:`pip install gadgit`
 
 Usage
 --------
 
 .. code-block:: python
+
         import gadgit
 
         ga_info = gadgit.GAInfo()
 
         fixed_genes = ['BRCA1', 'AR', 'ATM', 'CHEK2', 'BRCA2', 'STK11', 'RAD51', 'PTEN', 'BARD1', 'TP53', 'RB1CC1', 'NCOA3', 'PIK3CA', 'PPM1D', 'CASP8']
         gene_info = gadgit.GeneInfo('brca.pkl', ['Betweenness'], fixed_list=fixed_genes)
-
+        
         pop, stats, hof = gadgit.ga_single(gene_info, ga_info)
         gadgit.post_run(gene_info, ga_info, pop, stats, hof)
-code
 
 Features
 --------
