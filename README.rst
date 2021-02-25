@@ -43,6 +43,8 @@ Usage
         pop, stats, hof = gadgit.ga_single(gene_info, ga_info)
         gadgit.post_run(gene_info, ga_info, pop, stats, hof)
 
+Customization of parameters can be found in the class documentation of the :code:`GAInfo` and :code:`GeneInfo` classes.
+
 Features
 --------
 
