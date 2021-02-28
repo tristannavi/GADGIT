@@ -70,12 +70,52 @@ def valid_add(gene_info, individual):
     return random.choice(list(set(range(0, gene_info.gene_count)) - individual))
 
 def valid_remove(gene_info, individual):
-    """ Based on gene info, removed an index from an individual that respects fixed genes
+    """Based on gene info, removed an index from an individual that respects fixed genes
     """
     return random.choice(sorted(tuple(individual - set(gene_info.fixed_list_ids))))
 
+def self_correction(gene_info, individual):
+    """This function takes a potentially broken individual and returns a correct one.
+
+    Procedure:
+        Add all fixed genes
+        while size isn't right; add or remove
+    """
+
+    individual.update(gene_info.fixed_list_ids)
+    while True:
+        indiv_size = len(individual)
+        if indiv_size < gene_info.com_size:
+            individual.add(valid_add(gene_info, individual))
+        elif indiv_size > gene_info.com_size:
+            individual.remove(valid_remove(gene_info, individual))
+        else: # Must be equal
+            break
+
+    assert len(individual) == gene_info.com_size, 'Self correction failed to create indiv with proper size'
+    assert set(gene_info.fixed_list_ids).issubset(individual), 'Individual not possess all fixed genes after self correction'
+
+    return individual
+
 def cx_OPS(gene_info, ind1, ind2):
-    return None
+    """Standard one-point crossover implemented for set individuals.
+
+    Self correction is handled by abstracted function.
+
+    Note that this function has no ability to make assertions on the individuals it generates.
+    """
+    pivot = random.randint(0,gene_info.gene_count)
+    ind1_new = [i for i in ind1 if i < pivot] # Read from same
+    ind1_new.extend([i for i in ind2 if i > pivot]) # Read from other
+    ind2_new = [i for i in ind2 if i < pivot]
+    ind2_new.extend([i for i in ind1 if i > pivot])
+
+    ind1.clear() # Forcibly use proper individual class
+    ind1.update(ind1_new)
+    ind2.clear()
+    ind2.update(ind2_new)
+
+    return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
 
 def mut_flipper(gene_info, individual):
     """Flip based mutation. Flip one off to on, and one on to off.
@@ -125,7 +165,7 @@ def ga_single(gene_info, ga_info):
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", single_eval, gene_info)
-    toolbox.register("mate", cx_SDB, gene_info)
+    toolbox.register("mate", cx_OPS, gene_info)
     toolbox.register("mutate", mut_flipper, gene_info)
     toolbox.register("select", tools.selTournament, tournsize=ga_info.nk)
 
