@@ -165,7 +165,12 @@ def ga_single(gene_info, ga_info):
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", single_eval, gene_info)
-    toolbox.register("mate", cx_OPS, gene_info)
+    if ga_info.cross_meth == 'ops':
+        toolbox.register("mate", cx_OPS, gene_info)
+    elif ga_info.cross_meth == 'sdb':
+        toolbox.register("mate", cx_SDB, gene_info)
+    else:
+        raise AttributeError('Invalid crossover string specified')
     toolbox.register("mutate", mut_flipper, gene_info)
     toolbox.register("select", tools.selTournament, tournsize=ga_info.nk)
 
