@@ -31,7 +31,7 @@ def single_eval(gene_info, individual):
     
     return fit_sum, 
     
-def cxSDB(gene_info, ind1, ind2):
+def cx_SDB(gene_info, ind1, ind2):
     """SDB Crossover
     
     Computes the intersection and asserts that after the intersection,
@@ -64,15 +64,27 @@ def cxSDB(gene_info, ind1, ind2):
 
     return ind1, ind2
 
-def mutFlipper(gene_info, individual):
+def valid_add(gene_info, individual):
+    """Based on gene info and current individual, return a valid index to add to an individual
+    """
+    return random.choice(list(set(range(0, gene_info.gene_count)) - individual))
+
+def valid_remove(gene_info, individual):
+    """ Based on gene info, removed an index from an individual that respects fixed genes
+    """
+    return random.choice(sorted(tuple(individual - set(gene_info.fixed_list_ids))))
+
+def cx_OPS(gene_info, ind1, ind2):
+    return None
+
+def mut_flipper(gene_info, individual):
     """Flip based mutation. Flip one off to on, and one on to off.
     
     Must not allow the choice of a fixed gene to be turned off.
     """
     assert len(individual) == gene_info.com_size, 'Mutation received invalid indiv'
-    off_index = random.choice(list(set(range(0, gene_info.gene_count)) - individual))
-    individual.remove(random.choice(sorted(tuple(individual - set(gene_info.fixed_list_ids)))))
-    individual.add(off_index)
+    individual.remove(valid_remove(gene_info, individual))
+    individual.add(valid_add(gene_info, individual))
     assert len(individual) == gene_info.com_size, 'Mutation created an invalid indiv'
     assert set(gene_info.fixed_list_ids).issubset(individual), 'Individual does not possess all fixed genes after mutation'
 
@@ -113,8 +125,8 @@ def ga_single(gene_info, ga_info):
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", single_eval, gene_info)
-    toolbox.register("mate", cxSDB, gene_info)
-    toolbox.register("mutate", mutFlipper, gene_info)
+    toolbox.register("mate", cx_SDB, gene_info)
+    toolbox.register("mutate", mut_flipper, gene_info)
     toolbox.register("select", tools.selTournament, tournsize=ga_info.nk)
 
     pop = toolbox.population(n=ga_info.pop)
