@@ -4,4 +4,5 @@ pandas==1.2.2
 python-dateutil==2.8.1
 pytz==2021.1
 six==1.15.0
-sphinx
+Sphinx==1.8.5
+
