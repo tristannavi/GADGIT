@@ -15,7 +15,6 @@ docutils==0.16
 entrypoints==0.3
 filelock==3.0.12
 flake8==3.7.8
--e git+git@github.com:Andesha/GADGIT.git@1f2b1663e0dde8f499ec78c067dbfb3f470113bc#egg=gadgit
 idna==2.10
 imagesize==1.2.0
 Jinja2==2.11.3
