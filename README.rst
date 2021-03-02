@@ -30,10 +30,10 @@ Via `pip`:
 
 :code:`pip install gadgit`
 
+For more information, see the specific installation instructions in the documentation `here <https://gadgit.readthedocs.io/en/latest/installation.html>`_.
+
 Basic Usage
 --------
-
-For more information, see the specific installation instructions in the documentation `here <https://gadgit.readthedocs.io/en/latest/installation.html>`_.
 
 .. code-block:: python
 
