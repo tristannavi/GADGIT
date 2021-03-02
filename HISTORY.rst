@@ -2,6 +2,17 @@
 History
 =======
 
+0.2.0 (2021-03-02)
+------------------
+
+* Added documentation on readthedocs
+* Abstracted self corrections
+* Single point crossover added
+* Crossover selection
+* Random seed control
+* Update requirements
+
+
 0.1.3 (2021-02-17)
 ------------------
 
