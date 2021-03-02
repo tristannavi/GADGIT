@@ -24,16 +24,16 @@ Genetic Algorithm for Disease Gene Identification Toolbox
 
 
 Installation
---------
+----------------
 
 Via `pip`:
 
 :code:`pip install gadgit`
 
-For more information, see the specific installation instructions in the documentation `here <https://gadgit.readthedocs.io/en/latest/installation.html>`_.
+For more information, see the specific installation instructions in the `documentation <https://gadgit.readthedocs.io/en/latest/installation.html>`_.
 
 Basic Usage
---------
+----------------
 
 .. code-block:: python
 
@@ -47,15 +47,15 @@ Basic Usage
         pop, stats, hof = gadgit.ga_single(gene_info, ga_info)
         gadgit.post_run(gene_info, ga_info, pop, stats, hof)
 
-Customization of parameters can be found in the class documentation of the :code:`GAInfo` and :code:`GeneInfo` classes located `here <https://gadgit.readthedocs.io/en/latest/api/gadgit.html#module-gadgit.GAInfo>`_.
+Customization of parameters can be found in the class documentation of the :code:`GAInfo` and :code:`GeneInfo` classes located `on the module docs <https://gadgit.readthedocs.io/en/latest/api/gadgit.html#module-gadgit.GAInfo>`_.
 
 Features
---------
+----------------
 
 * TODO
 
 Credits
--------
+----------------
 
 This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
 

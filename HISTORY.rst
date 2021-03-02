@@ -2,6 +2,12 @@
 History
 =======
 
+0.2.1 (2021-03-02)
+------------------
+
+* Reformatting of documentation and help page text to pass checks
+
+
 0.2.0 (2021-03-02)
 ------------------
 
