@@ -27,4 +27,4 @@ An example where the Genetic Algorithm parameters have been customized::
     pop, stats, hof = gadgit.ga_single(gene_info, ga_info)
     gadgit.post_run(gene_info, ga_info, pop, stats, hof)
 
-For more documentation on how to customize the parameter classes see here
+For more documentation on how to customize the parameter classes see `here <https://gadgit.readthedocs.io/en/latest/installation.html>`_.
