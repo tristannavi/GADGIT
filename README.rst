@@ -28,7 +28,7 @@ Installation
 
 :code:`pip install gadgit`
 
-Usage
+Basic Usage
 --------
 
 .. code-block:: python
