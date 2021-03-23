@@ -240,19 +240,8 @@ def ga_multi(gene_info, ga_info):
     
     return pop, stats, hof
 
-def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None,
-             halloffame=None, verbose=__debug__):
-    """
-    This function runs an EA using the SoR fitness methodology.
-
-    It is essentially a fork of the eaSimple function from deap.
-    It is not meant to be exposed to users and insstead is only used
-    internally by the package.
-    """
-
-    logbook = tools.Logbook()
-    logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
-
+def multi_eval(gene_info, population):
+    """Helper function to implement the SoR table operations."""
     # Build raw objective information
     all_rows = []
     for indiv in population:
@@ -269,11 +258,32 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None
         append_ranks = swap_index.sort_index()
         sor[obj+'_rank_norm'] = append_ranks / append_ranks.max()
 
-    sor['sum'] = sor[list(sor.columns)].sum(axis=1)
+    return sor[list(sor.columns)].sum(axis=1)
+
+
+def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None,
+             halloffame=None, verbose=__debug__):
+    """
+    This function runs an EA using the SoR fitness methodology.
+
+    It is essentially a fork of the eaSimple function from deap.
+    It is not meant to be exposed to users and insstead is only used
+    internally by the package.
+    """
+
+    logbook = tools.Logbook()
+    logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
+
+    fit_series = multi_eval(gene_info, population)
+    print(list(fit_series))
+
+    for index, fit_val in fit_series.items():
+        population[index].fitness.values = fit_val,
+
+    some_test = [val.fitness.values for val in population]
+    print(some_test)
 
     raise ValueError
-    for ind, fit in zip(invalid_ind, fitnesses):
-        ind.fitness.values = fit
 
     if halloffame is not None:
         halloffame.update(population)
