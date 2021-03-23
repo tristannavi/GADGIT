@@ -139,7 +139,7 @@ def indiv_builder(gene_info):
     return base_indiv
 
 def ga_single(gene_info, ga_info):
-    """Main loop which sets DEAP objects and calls EA algorithm.
+    """Main loop which sets DEAP objects and calls a single objective EA algorithm.
     
     Parameters
     -------
@@ -183,5 +183,54 @@ def ga_single(gene_info, ga_info):
     stats.register("max", np.max, axis=0)
     
     algorithms.eaSimple(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen, stats, halloffame=hof)
+    
+    return pop, stats, hof
+
+def ga_multi(gene_info, ga_info):
+    """Main loop which sets DEAP objects and calls a multi objective EA algorithm.
+    
+    Parameters
+    -------
+    gene_info, GeneInfo class
+        See respective class documentation.
+    ga_info, GAInfo class
+        See respective class documentation.
+
+    Returns
+    -------
+    pop, DEAP object
+    stats, DEAP object
+    hof, DEAP object
+
+    See post_run function for examples of how to interpret results.
+
+    """
+
+    random.seed(ga_info.seed)
+
+    creator.create("Fitness", base.Fitness, weights=(1.0,))
+    creator.create("Individual", set, fitness=creator.Fitness)
+
+    toolbox = base.Toolbox()
+    toolbox.register("indices", indiv_builder, gene_info)
+    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
+    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
+    # toolbox.register("evaluate", single_eval, gene_info)
+    if ga_info.cross_meth == 'ops':
+        toolbox.register("mate", cx_OPS, gene_info)
+    elif ga_info.cross_meth == 'sdb':
+        toolbox.register("mate", cx_SDB, gene_info)
+    else:
+        raise AttributeError('Invalid crossover string specified')
+    toolbox.register("mutate", mut_flipper, gene_info)
+    toolbox.register("select", tools.selTournament, tournsize=ga_info.nk)
+
+    pop = toolbox.population(n=ga_info.pop)
+    hof = tools.HallOfFame(1)
+    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    stats.register("avg", np.mean, axis=0)
+    stats.register("max", np.max, axis=0)
+    
+    # algorithms.eaSimple(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen, stats, halloffame=hof)
     
     return pop, stats, hof
