@@ -9,6 +9,8 @@ from deap import base
 from deap import creator
 from deap import tools
 
+from deap.algorithms import varAnd
+
 from .GAInfo import GAInfo
 from .GeneInfo import GeneInfo
 from .post_run import post_run
@@ -218,6 +220,8 @@ def ga_multi(gene_info, ga_info):
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", single_eval, gene_info)
+    if len(gene_info.obj_list) < 2:
+        raise AttributeError('Attempted to start multi objective GA with single objective.')
     if ga_info.cross_meth == 'ops':
         toolbox.register("mate", cx_OPS, gene_info)
     elif ga_info.cross_meth == 'sdb':
@@ -230,8 +234,6 @@ def ga_multi(gene_info, ga_info):
     pop = toolbox.population(n=ga_info.pop)
     hof = tools.HallOfFame(1)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
-    # stats.register("avg", np.mean, axis=0)
-    # stats.register("max", np.max, axis=0)
     
     eaSoR(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen, stats, halloffame=hof)
     
@@ -262,7 +264,7 @@ def eaSoR(population, toolbox, cxpb, mutpb, ngen, stats=None,
     record = stats.compile(population) if stats else {}
     logbook.record(gen=0, nevals=len(invalid_ind), **record)
     if verbose:
-        print logbook.stream
+        print(logbook.stream)
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
@@ -289,6 +291,6 @@ def eaSoR(population, toolbox, cxpb, mutpb, ngen, stats=None,
         record = stats.compile(population) if stats else {}
         logbook.record(gen=gen, nevals=len(invalid_ind), **record)
         if verbose:
-            print logbook.stream
+            print(logbook.stream)
 
     return population, logbook
