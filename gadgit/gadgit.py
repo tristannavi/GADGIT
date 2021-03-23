@@ -253,18 +253,23 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None
     logbook = tools.Logbook()
     logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
 
-    # Evaluate the individuals with an invalid fitness
-    invalid_ind = [ind for ind in population if not ind.fitness.valid]
-    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-
+    # Build raw objective information
     all_rows = []
     for indiv in population:
         indiv_slice = gene_info.data_frame.loc[list(indiv)]
         indiv_sums = [indiv_slice[obj].sum() for obj in gene_info.obj_list]
         all_rows.append(indiv_sums)
-
     raw_frame = pd.DataFrame(all_rows, columns=gene_info.obj_list)
-    print(raw_frame)
+
+    # Ranking procedure
+    sor = pd.DataFrame()
+    for obj in raw_frame.columns:
+        rank_series = np.argsort(raw_frame[obj])
+        swap_index = pd.Series(dict((v,k) for k,v in rank_series.iteritems()))
+        append_ranks = swap_index.sort_index()
+        sor[obj+'_rank_norm'] = append_ranks / append_ranks.max()
+
+    sor['sum'] = sor[list(sor.columns)].sum(axis=1)
 
     raise ValueError
     for ind, fit in zip(invalid_ind, fitnesses):
