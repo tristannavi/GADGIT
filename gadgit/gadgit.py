@@ -233,13 +233,14 @@ def ga_multi(gene_info, ga_info):
 
     pop = toolbox.population(n=ga_info.pop)
     hof = tools.HallOfFame(1)
-    stats = tools.Statistics(lambda ind: ind.fitness.values)
+    # Empty, as SoR objects are special
+    stats = tools.Statistics()
     
-    eaSoR(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen, stats, halloffame=hof)
+    eaSoR(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen, stats, halloffame=hof)
     
     return pop, stats, hof
 
-def eaSoR(population, toolbox, cxpb, mutpb, ngen, stats=None,
+def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None,
              halloffame=None, verbose=__debug__):
     """
     This function runs an EA using the SoR fitness methodology.
@@ -255,6 +256,17 @@ def eaSoR(population, toolbox, cxpb, mutpb, ngen, stats=None,
     # Evaluate the individuals with an invalid fitness
     invalid_ind = [ind for ind in population if not ind.fitness.valid]
     fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+
+    all_rows = []
+    for indiv in population:
+        indiv_slice = gene_info.data_frame.loc[list(indiv)]
+        indiv_sums = [indiv_slice[obj].sum() for obj in gene_info.obj_list]
+        all_rows.append(indiv_sums)
+
+    raw_frame = pd.DataFrame(all_rows, columns=gene_info.obj_list)
+    print(raw_frame)
+
+    raise ValueError
     for ind, fit in zip(invalid_ind, fitnesses):
         ind.fitness.values = fit
 
