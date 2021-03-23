@@ -215,7 +215,7 @@ def ga_multi(gene_info, ga_info):
     toolbox.register("indices", indiv_builder, gene_info)
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    # toolbox.register("evaluate", single_eval, gene_info)
+    toolbox.register("evaluate", single_eval, gene_info)
     if ga_info.cross_meth == 'ops':
         toolbox.register("mate", cx_OPS, gene_info)
     elif ga_info.cross_meth == 'sdb':
@@ -228,9 +228,65 @@ def ga_multi(gene_info, ga_info):
     pop = toolbox.population(n=ga_info.pop)
     hof = tools.HallOfFame(1)
     stats = tools.Statistics(lambda ind: ind.fitness.values)
-    stats.register("avg", np.mean, axis=0)
-    stats.register("max", np.max, axis=0)
+    # stats.register("avg", np.mean, axis=0)
+    # stats.register("max", np.max, axis=0)
     
-    # algorithms.eaSimple(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen, stats, halloffame=hof)
+    eaSoR(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen, stats, halloffame=hof)
     
     return pop, stats, hof
+
+def eaSoR(population, toolbox, cxpb, mutpb, ngen, stats=None,
+             halloffame=None, verbose=__debug__):
+    """
+    This function runs an EA using the SoR fitness methodology.
+
+    It is essentially a fork of the eaSimple function from deap.
+    It is not meant to be exposed to users and insstead is only used
+    internally by the package.
+    """
+
+    logbook = tools.Logbook()
+    logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
+
+    # Evaluate the individuals with an invalid fitness
+    invalid_ind = [ind for ind in population if not ind.fitness.valid]
+    fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+    for ind, fit in zip(invalid_ind, fitnesses):
+        ind.fitness.values = fit
+
+    if halloffame is not None:
+        halloffame.update(population)
+
+    record = stats.compile(population) if stats else {}
+    logbook.record(gen=0, nevals=len(invalid_ind), **record)
+    if verbose:
+        print logbook.stream
+
+    # Begin the generational process
+    for gen in range(1, ngen + 1):
+        # Select the next generation individuals
+        offspring = toolbox.select(population, len(population))
+
+        # Vary the pool of individuals
+        offspring = varAnd(offspring, toolbox, cxpb, mutpb)
+
+        # Evaluate the individuals with an invalid fitness
+        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
+        for ind, fit in zip(invalid_ind, fitnesses):
+            ind.fitness.values = fit
+
+        # Update the hall of fame with the generated individuals
+        if halloffame is not None:
+            halloffame.update(offspring)
+
+        # Replace the current population by the offspring
+        population[:] = offspring
+
+        # Append the current generation statistics to the logbook
+        record = stats.compile(population) if stats else {}
+        logbook.record(gen=gen, nevals=len(invalid_ind), **record)
+        if verbose:
+            print logbook.stream
+
+    return population, logbook
