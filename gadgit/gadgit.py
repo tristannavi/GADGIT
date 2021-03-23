@@ -167,6 +167,8 @@ def ga_single(gene_info, ga_info):
     toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", single_eval, gene_info)
+    if len(gene_info.obj_list) > 1:
+        raise AttributeError('Attempted to start single objective GA with multiple objectives.')
     if ga_info.cross_meth == 'ops':
         toolbox.register("mate", cx_OPS, gene_info)
     elif ga_info.cross_meth == 'sdb':
