@@ -274,22 +274,18 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None
     logbook = tools.Logbook()
     logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
 
+    # Offload SoR to table
     fit_series = multi_eval(gene_info, population)
-    print(list(fit_series))
 
+    # Update ALL fitness vals
     for index, fit_val in fit_series.items():
         population[index].fitness.values = fit_val,
-
-    some_test = [val.fitness.values for val in population]
-    print(some_test)
-
-    raise ValueError
 
     if halloffame is not None:
         halloffame.update(population)
 
     record = stats.compile(population) if stats else {}
-    logbook.record(gen=0, nevals=len(invalid_ind), **record)
+    logbook.record(gen=0, nevals='maximal-temp', **record)
     if verbose:
         print(logbook.stream)
 
@@ -301,11 +297,12 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None
         # Vary the pool of individuals
         offspring = varAnd(offspring, toolbox, cxpb, mutpb)
 
-        # Evaluate the individuals with an invalid fitness
-        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
-        for ind, fit in zip(invalid_ind, fitnesses):
-            ind.fitness.values = fit
+        # Offload SoR to table
+        fit_series = multi_eval(gene_info, population)
+
+        # Update ALL fitness vals
+        for index, fit_val in fit_series.items():
+            population[index].fitness.values = fit_val,
 
         # Update the hall of fame with the generated individuals
         if halloffame is not None:
@@ -316,7 +313,7 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None
 
         # Append the current generation statistics to the logbook
         record = stats.compile(population) if stats else {}
-        logbook.record(gen=gen, nevals=len(invalid_ind), **record)
+        logbook.record(gen=gen, nevals='maximal-temp', **record)
         if verbose:
             print(logbook.stream)
 
