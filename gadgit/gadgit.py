@@ -160,7 +160,7 @@ def ga_single(gene_info, ga_info):
 
     See post_run function for examples of how to interpret results.
     """
-    
+
     random.seed(ga_info.seed)
 
     creator.create("Fitness", base.Fitness, weights=(1.0,))
@@ -255,13 +255,15 @@ def multi_eval(gene_info, population):
 
     # Ranking procedure
     sor = pd.DataFrame()
+    obj_max = {}
     for obj in raw_frame.columns:
+        obj_max[obj] = raw_frame[obj].max()
         rank_series = np.argsort(raw_frame[obj])
         swap_index = pd.Series(dict((v,k) for k,v in rank_series.iteritems()))
         append_ranks = swap_index.sort_index()
         sor[obj+'_rank_norm'] = append_ranks / append_ranks.max()
 
-    return sor[list(sor.columns)].sum(axis=1)
+    return sor[list(sor.columns)].sum(axis=1), obj_max
 
 
 def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None,
@@ -275,10 +277,10 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None
     """
 
     logbook = tools.Logbook()
-    logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
+    logbook.header = ['gen', 'nevals'] + (gene_info.obj_list if stats else [])
 
     # Offload SoR to table
-    fit_series = multi_eval(gene_info, population)
+    fit_series, obj_max = multi_eval(gene_info, population)
 
     # Update ALL fitness vals
     for index, fit_val in fit_series.items():
@@ -287,8 +289,7 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None
     if halloffame is not None:
         halloffame.update(population)
 
-    record = stats.compile(population) if stats else {}
-    logbook.record(gen=0, nevals='maximal-temp', **record)
+    logbook.record(gen=0, nevals='maximal-temp', **obj_max)
     if verbose:
         print(logbook.stream)
 
@@ -301,7 +302,7 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None
         offspring = varAnd(offspring, toolbox, cxpb, mutpb)
 
         # Offload SoR to table
-        fit_series = multi_eval(gene_info, population)
+        fit_series, obj_max = multi_eval(gene_info, population)
 
         # Update ALL fitness vals
         for index, fit_val in fit_series.items():
@@ -315,8 +316,7 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None
         population[:] = offspring
 
         # Append the current generation statistics to the logbook
-        record = stats.compile(population) if stats else {}
-        logbook.record(gen=gen, nevals='maximal-temp', **record)
+        logbook.record(gen=gen, nevals='maximal-temp', **obj_max)
         if verbose:
             print(logbook.stream)
 
