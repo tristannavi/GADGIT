@@ -52,7 +52,14 @@ Customization of parameters can be found in the class documentation of the :code
 Features
 ----------------
 
-* TODO
+* Multi objective support
+* Evolutionary algorithm parameter selection
+* Dynamic bioinformatics settings
+* Variable community size
+* Generational statistics
+* Post processing helpers
+* Centrality builders
+* HPC ready
 
 Credits
 ----------------
