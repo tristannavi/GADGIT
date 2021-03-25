@@ -1,6 +1,8 @@
 def post_run(gene_info, ga_info, pop, stats, hof):
     """Takes in the results of some GA and displays information based on the problem definition.
 
+    Must contain GeneName in dataframe.
+
     Parameters
     -------
     gene_info: GeneInfo class
@@ -9,6 +11,9 @@ def post_run(gene_info, ga_info, pop, stats, hof):
     stats: DEAP stats object
     hof: DEAP hall of fame object
     """
+
+    if 'GeneName' not in gene_info.data_frame.columns:
+        raise AttributeError('GeneNames column not found for post processing script.')
 
     elite = hof[0]
     print('Size: ', len(elite))
