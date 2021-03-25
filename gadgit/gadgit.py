@@ -159,8 +159,8 @@ def ga_single(gene_info, ga_info):
     hof, DEAP object
 
     See post_run function for examples of how to interpret results.
-
     """
+    
     random.seed(ga_info.seed)
 
     creator.create("Fitness", base.Fitness, weights=(1.0,))
@@ -209,7 +209,6 @@ def ga_multi(gene_info, ga_info):
     hof, DEAP object
 
     See post_run function for examples of how to interpret results.
-
     """
 
     random.seed(ga_info.seed)
