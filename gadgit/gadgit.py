@@ -20,6 +20,8 @@ def single_eval(gene_info, individual):
     
     Due to gene_info.obj_list obviously accepting a list for the purposes of extending to MOP,
     in the case of this single_eval, the head of the list is treated as the 'single' objective.
+
+    Note: does not correctly calculate the frontier.
     """
 
     assert len(individual) == gene_info.com_size, 'Indiv does not match community size in eval'
@@ -221,7 +223,7 @@ def ga_multi(gene_info, ga_info):
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", single_eval, gene_info)
     if len(gene_info.obj_list) < 2:
-        raise AttributeError('Attempted to start multi objective GA with single objective.')
+        print('Attempted to start multi objective GA with single objective.', file=sys.stderr)
     if ga_info.cross_meth == 'ops':
         toolbox.register("mate", cx_OPS, gene_info)
     elif ga_info.cross_meth == 'sdb':
@@ -245,6 +247,8 @@ def multi_eval(gene_info, population):
     # Build raw objective information
     all_rows = []
     for indiv in population:
+        for index in indiv:
+            gene_info.frontier[index] += 1
         indiv_slice = gene_info.data_frame.loc[list(indiv)]
         indiv_sums = [indiv_slice[obj].sum() for obj in gene_info.obj_list]
         all_rows.append(indiv_sums)
