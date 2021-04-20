@@ -11,15 +11,14 @@ from deap import tools
 
 from deap.algorithms import varAnd
 
-from .GAInfo import GAInfo
-from .GeneInfo import GeneInfo
-from .post_run import post_run
 
 def single_eval(gene_info, individual):
-    """ Single objective summation of the centrality of a particular frame's chosen column.
-    
-    Due to gene_info.obj_list obviously accepting a list for the purposes of extending to MOP,
-    in the case of this single_eval, the head of the list is treated as the 'single' objective.
+    """ Single objective summation of the centrality of a particular
+    frame's chosen column.
+
+    Due to gene_info.obj_list obviously accepting a list for the purposes of
+    extending to MOP, in the case of this single_eval, the head of the list
+    is treated as the 'single' objective.
 
     Note: does not correctly calculate the frontier.
     """
@@ -32,21 +31,26 @@ def single_eval(gene_info, individual):
     for item in individual:
         fit_sum += gene_info.data_frame.iloc[item][fit_col]
         # gene_info.frontier[item] += 1
-    
-    return fit_sum, 
-    
+
+    return fit_sum,
+
+
 def cx_SDB(gene_info, ind1, ind2):
     """SDB Crossover
-    
+
     Computes the intersection and asserts that after the intersection,
-    the amount of genes left over to 'deal' between two new individuals is even.
+    the amount of genes left over to 'deal' between two new individuals
+    is even.
 
-    Clears the set structures of their old information, updates with the intersection,
-    and lastly hands out half of the shuffled dealer to each indiv.
+    Clears the set structures of their old information, updates with the
+    intersection, and lastly hands out half of the shuffled dealer to each
+    indiv.
 
-    ind1 and ind2 and kept as objects since they inherit from set, but have additional properties.
+    ind1 and ind2 and kept as objects since they inherit from set, but have
+    additional properties.
 
-    Note that this process is not destructive to the fixed genes inside of the individuals.
+    Note that this process is not destructive to the fixed genes inside of the
+    individuals.
     """
 
     # Build dealer
@@ -68,18 +72,24 @@ def cx_SDB(gene_info, ind1, ind2):
 
     return ind1, ind2
 
+
 def valid_add(gene_info, individual):
-    """Based on gene info and current individual, return a valid index to add to an individual
+    """Based on gene info and current individual, return a valid index to add
+    to an individual.
     """
     return random.choice(list(set(range(0, gene_info.gene_count)) - individual))
 
+
 def valid_remove(gene_info, individual):
-    """Based on gene info, removed an index from an individual that respects fixed genes
+    """Based on gene info, removed an index from an individual that respects
+    fixed genes
     """
     return random.choice(sorted(tuple(individual - set(gene_info.fixed_list_ids))))
 
+
 def self_correction(gene_info, individual):
-    """This function takes a potentially broken individual and returns a correct one.
+    """This function takes a potentially broken individual and returns a
+    correct one.
 
     Procedure:
         Add all fixed genes
@@ -93,7 +103,7 @@ def self_correction(gene_info, individual):
             individual.add(valid_add(gene_info, individual))
         elif indiv_size > gene_info.com_size:
             individual.remove(valid_remove(gene_info, individual))
-        else: # Must be equal
+        else:  # Must be equal
             break
 
     assert len(individual) == gene_info.com_size, 'Self correction failed to create indiv with proper size'
@@ -101,29 +111,32 @@ def self_correction(gene_info, individual):
 
     return individual
 
+
 def cx_OPS(gene_info, ind1, ind2):
     """Standard one-point crossover implemented for set individuals.
 
     Self correction is handled by abstracted function.
 
-    Note that this function has no ability to make assertions on the individuals it generates.
+    Note that this function has no ability to make assertions on the
+    individuals it generates.
     """
-    pivot = random.randint(0,gene_info.gene_count)
-    ind1_new = [i for i in ind1 if i < pivot] # Read from same
-    ind1_new.extend([i for i in ind2 if i > pivot]) # Read from other
+    pivot = random.randint(0, gene_info.gene_count)
+    ind1_new = [i for i in ind1 if i < pivot]  # Read from same
+    ind1_new.extend([i for i in ind2 if i > pivot])  # Read from other
     ind2_new = [i for i in ind2 if i < pivot]
     ind2_new.extend([i for i in ind1 if i > pivot])
 
-    ind1.clear() # Forcibly use proper individual class
+    ind1.clear()  # Forcibly use proper individual class
     ind1.update(ind1_new)
     ind2.clear()
     ind2.update(ind2_new)
 
     return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
 
+
 def mut_flipper(gene_info, individual):
     """Flip based mutation. Flip one off to on, and one on to off.
-    
+
     Must not allow the choice of a fixed gene to be turned off.
     """
     assert len(individual) == gene_info.com_size, 'Mutation received invalid indiv'
@@ -134,6 +147,7 @@ def mut_flipper(gene_info, individual):
 
     return individual,
 
+
 def indiv_builder(gene_info):
     """Implementation of forcing fixed genes in creation of new individual."""
     num_choices = gene_info.com_size - len(gene_info.fixed_list)
@@ -142,9 +156,10 @@ def indiv_builder(gene_info):
     base_indiv.extend(gene_info.fixed_list_ids)
     return base_indiv
 
+
 def ga_single(gene_info, ga_info):
     """Main loop which sets DEAP objects and calls a single objective EA algorithm.
-    
+
     Parameters
     -------
     gene_info, GeneInfo class
@@ -168,11 +183,13 @@ def ga_single(gene_info, ga_info):
 
     toolbox = base.Toolbox()
     toolbox.register("indices", indiv_builder, gene_info)
-    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
+    toolbox.register("individual", tools.initIterate, creator.Individual,
+                     toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", single_eval, gene_info)
     if len(gene_info.obj_list) > 1:
-        raise AttributeError('Attempted to start single objective GA with multiple objectives.')
+        raise AttributeError('Attempted to start single objective GA with'
+                             'multiple objectives.')
     if ga_info.cross_meth == 'ops':
         toolbox.register("mate", cx_OPS, gene_info)
     elif ga_info.cross_meth == 'sdb':
@@ -187,14 +204,15 @@ def ga_single(gene_info, ga_info):
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register("avg", np.mean, axis=0)
     stats.register("max", np.max, axis=0)
-    
+
     algorithms.eaSimple(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen, stats, halloffame=hof)
-    
+
     return pop, stats, hof
+
 
 def ga_multi(gene_info, ga_info):
     """Main loop which sets DEAP objects and calls a multi objective EA algorithm.
-    
+
     Parameters
     -------
     gene_info, GeneInfo class
@@ -218,11 +236,13 @@ def ga_multi(gene_info, ga_info):
 
     toolbox = base.Toolbox()
     toolbox.register("indices", indiv_builder, gene_info)
-    toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.indices)
+    toolbox.register("individual", tools.initIterate, creator.Individual,
+                     toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", single_eval, gene_info)
     if len(gene_info.obj_list) < 2:
-        print('Attempted to start multi objective GA with single objective.', file=sys.stderr)
+        print('Attempted to start multi objective GA with single objective.',
+              file=sys.stderr)
     if ga_info.cross_meth == 'ops':
         toolbox.register("mate", cx_OPS, gene_info)
     elif ga_info.cross_meth == 'sdb':
@@ -236,10 +256,12 @@ def ga_multi(gene_info, ga_info):
     hof = tools.HallOfFame(1)
     # Empty, as SoR objects are special
     stats = tools.Statistics()
-    
-    eaSoR(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen, stats, halloffame=hof)
-    
+
+    eaSoR(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
+          ga_info.gen, stats, halloffame=hof)
+
     return pop, stats, hof
+
 
 def multi_eval(gene_info, population):
     """Helper function to implement the SoR table operations."""
@@ -259,15 +281,15 @@ def multi_eval(gene_info, population):
     for obj in raw_frame.columns:
         obj_max[obj] = raw_frame[obj].max()
         rank_series = np.argsort(raw_frame[obj])
-        swap_index = pd.Series(dict((v,k) for k,v in rank_series.iteritems()))
+        swap_index = pd.Series(dict((v, k) for k, v in rank_series.iteritems()))
         append_ranks = swap_index.sort_index()
         sor[obj+'_rank_norm'] = append_ranks / append_ranks.max()
 
     return sor[list(sor.columns)].sum(axis=1), obj_max
 
 
-def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen, stats=None,
-             halloffame=None, verbose=__debug__):
+def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen,
+          stats=None, halloffame=None, verbose=__debug__):
     """
     This function runs an EA using the SoR fitness methodology.
 
