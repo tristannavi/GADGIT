@@ -23,8 +23,10 @@ def single_eval(gene_info, individual):
     Note: does not correctly calculate the frontier.
     """
 
-    assert len(individual) == gene_info.com_size, 'Indiv does not match community size in eval'
-    assert set(gene_info.fixed_list_ids).issubset(individual), 'Indiv does not possess all fixed genes'
+    assert len(individual) == gene_info.com_size, \
+        'Indiv does not match community size in eval'
+    assert set(gene_info.fixed_list_ids).issubset(individual), \
+        'Indiv does not possess all fixed genes'
 
     fit_col = gene_info.obj_list[0]
     fit_sum = 0.0
@@ -66,9 +68,12 @@ def cx_SDB(gene_info, ind1, ind2):
     ind1.update(intersect)
     ind2.update(dealer[len(dealer)//2:])
     ind2.update(intersect)
-    assert len(ind1) == gene_info.com_size and len(ind2) == gene_info.com_size, 'SDB created invalid individual'
-    assert set(gene_info.fixed_list_ids).issubset(ind1), 'Ind1 does not possess all fixed genes after crossover'
-    assert set(gene_info.fixed_list_ids).issubset(ind2), 'Ind2 does not possess all fixed genes after crossover'
+    assert (len(ind1) == gene_info.com_size and
+            len(ind2) == gene_info.com_size), 'SDB created invalid individual'
+    assert set(gene_info.fixed_list_ids).issubset(ind1), \
+        'Ind1 does not possess all fixed genes after crossover'
+    assert set(gene_info.fixed_list_ids).issubset(ind2), \
+        'Ind2 does not possess all fixed genes after crossover'
 
     return ind1, ind2
 
@@ -77,14 +82,16 @@ def valid_add(gene_info, individual):
     """Based on gene info and current individual, return a valid index to add
     to an individual.
     """
-    return random.choice(list(set(range(0, gene_info.gene_count)) - individual))
+    return random.choice(list(set(range(0, gene_info.gene_count))
+                              - individual))
 
 
 def valid_remove(gene_info, individual):
     """Based on gene info, removed an index from an individual that respects
     fixed genes
     """
-    return random.choice(sorted(tuple(individual - set(gene_info.fixed_list_ids))))
+    return random.choice(sorted(tuple(individual
+                                - set(gene_info.fixed_list_ids))))
 
 
 def self_correction(gene_info, individual):
@@ -106,8 +113,10 @@ def self_correction(gene_info, individual):
         else:  # Must be equal
             break
 
-    assert len(individual) == gene_info.com_size, 'Self correction failed to create indiv with proper size'
-    assert set(gene_info.fixed_list_ids).issubset(individual), 'Individual not possess all fixed genes after self correction'
+    assert len(individual) == gene_info.com_size, \
+        'Self correction failed to create indiv with proper size'
+    assert set(gene_info.fixed_list_ids).issubset(individual), \
+        'Individual not possess all fixed genes after self correction'
 
     return individual
 
@@ -139,11 +148,14 @@ def mut_flipper(gene_info, individual):
 
     Must not allow the choice of a fixed gene to be turned off.
     """
-    assert len(individual) == gene_info.com_size, 'Mutation received invalid indiv'
+    assert len(individual) == gene_info.com_size, \
+        'Mutation received invalid indiv'
     individual.remove(valid_remove(gene_info, individual))
     individual.add(valid_add(gene_info, individual))
-    assert len(individual) == gene_info.com_size, 'Mutation created an invalid indiv'
-    assert set(gene_info.fixed_list_ids).issubset(individual), 'Individual does not possess all fixed genes after mutation'
+    assert len(individual) == gene_info.com_size, \
+        'Mutation created an invalid indiv'
+    assert set(gene_info.fixed_list_ids).issubset(individual), \
+        ('Individual does not possess all fixed genes after mutation')
 
     return individual,
 
@@ -151,7 +163,8 @@ def mut_flipper(gene_info, individual):
 def indiv_builder(gene_info):
     """Implementation of forcing fixed genes in creation of new individual."""
     num_choices = gene_info.com_size - len(gene_info.fixed_list)
-    valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_ids))
+    valid_choices = list(set(range(gene_info.gene_count))
+                         - set(gene_info.fixed_list_ids))
     base_indiv = random.sample(valid_choices, num_choices)
     base_indiv.extend(gene_info.fixed_list_ids)
     return base_indiv
@@ -205,7 +218,8 @@ def ga_single(gene_info, ga_info):
     stats.register("avg", np.mean, axis=0)
     stats.register("max", np.max, axis=0)
 
-    algorithms.eaSimple(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen, stats, halloffame=hof)
+    algorithms.eaSimple(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
+                        stats, halloffame=hof)
 
     return pop, stats, hof
 
@@ -281,7 +295,8 @@ def multi_eval(gene_info, population):
     for obj in raw_frame.columns:
         obj_max[obj] = raw_frame[obj].max()
         rank_series = np.argsort(raw_frame[obj])
-        swap_index = pd.Series(dict((v, k) for k, v in rank_series.iteritems()))
+        swap_index = pd.Series(dict((v, k)
+                               for k, v in rank_series.iteritems()))
         append_ranks = swap_index.sort_index()
         sor[obj+'_rank_norm'] = append_ranks / append_ranks.max()
 
