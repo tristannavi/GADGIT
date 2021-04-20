@@ -1,11 +1,14 @@
 from datetime import datetime
 
+
 class GAInfo:
     """This class stores information regarding evolutionary parameters."""
 
-    def __init__(self, generation=100, population=25, cross_chance=0.75, mut_chance=0.25, tourn_k=3, cross_meth='sdb', seed=datetime.now()):
+    def __init__(self, generation=100, population=25, cross_chance=0.75,
+                 mut_chance=0.25, tourn_k=3, cross_meth='sdb',
+                 seed=datetime.now()):
         """Default constructor provides control over default EA parameters.
-        
+
         See defaults inside of function header.
 
         Parameters
@@ -39,4 +42,7 @@ class GAInfo:
     def __str__(self):
         """Return params as string."""
 
-        return "Population: {}\nGeneration: {}\nCrossover: {}\nMutation: {}\nTournament: {}\nCross Method: {}\nSeed: {}".format(self.gen, self.pop, self.cxpb, self.mutpb, self.nk, self.cross_meth, self.seed)
+        return "Population: {}\nGeneration: {}\nCrossover: {}\nMutation: {}" \
+               "\nTournament: {}\nCross Method: {}\nSeed: {}" \
+               .format(self.gen, self.pop, self.cxpb, self.mutpb,
+                       self.nk, self.cross_meth, self.seed)

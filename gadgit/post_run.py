@@ -1,5 +1,6 @@
 def post_run(gene_info, ga_info, pop, stats, hof):
-    """Takes in the results of some GA and displays information based on the problem definition.
+    """Takes in the results of some GA and displays information based
+    on the problem definition.
 
     Must contain GeneName in dataframe.
 
@@ -13,7 +14,8 @@ def post_run(gene_info, ga_info, pop, stats, hof):
     """
 
     if 'GeneName' not in gene_info.data_frame.columns:
-        raise AttributeError('GeneNames column not found for post processing script.')
+        raise AttributeError('GeneNames column not found for post '
+                             'processing script.')
 
     elite = hof[0]
     print('Size: ', len(elite))
@@ -27,7 +29,8 @@ def post_run(gene_info, ga_info, pop, stats, hof):
     print(buf)
     print('Nodes exloration count: ')
     print(gene_info.frontier)
-    missed_nodes = [gene_info.data_frame.iloc[ind]['GeneName'] for ind, x in enumerate(gene_info.frontier) if x == 0]
+    missed_nodes = [gene_info.data_frame.iloc[ind]['GeneName']
+                    for ind, x in enumerate(gene_info.frontier) if x == 0]
     print('Nodes never explored (bad): N =', len(missed_nodes))
     print(', '.join(missed_nodes))
     print('Gene Info:')
