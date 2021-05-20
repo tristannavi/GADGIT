@@ -2,6 +2,15 @@
 History
 =======
 
+0.3.0 (2021-05-20)
+------------------
+
+* Restructured module
+* SoR support
+* Error checking
+* README updates
+* Linting fixes
+
 0.2.1 (2021-03-02)
 ------------------
 
