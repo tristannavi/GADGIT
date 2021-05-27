@@ -2,7 +2,7 @@
 
 __author__ = """Tyler Collins"""
 __email__ = 'tk11br@sharcnet.ca'
-__version__ = '0.3.0'
+__version__ = '0.4.0'
 
 from .GAInfo import GAInfo
 from .GeneInfo import GeneInfo

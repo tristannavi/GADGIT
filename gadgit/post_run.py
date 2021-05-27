@@ -37,3 +37,15 @@ def post_run(gene_info, ga_info, pop, stats, hof):
     print(gene_info)
     print('GA Info')
     print(ga_info)
+    print('Gene rankings including fixed genes:')
+    rank_pair = zip(list(gene_info.data_frame['GeneName']), gene_info.frontier)
+    rank_pair = sorted(rank_pair, reverse=True, key=lambda y: y[1])
+    place_list = []
+    current_place = 1
+    last_element = rank_pair[0][1]
+    for i, element in enumerate(rank_pair):
+        if element[1] != last_element:
+            current_place = i + 1
+        last_element = element[1]
+        place_list.append(current_place)
+    print(list(zip([x[0] for x in rank_pair], place_list)))

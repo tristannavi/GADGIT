@@ -2,6 +2,13 @@
 History
 =======
 
+0.4.0 (2021-05-27)
+------------------
+
+* Change frontier to be calculated only based on elite
+* Add elite gene ranker to post run script
+
+
 0.3.0 (2021-05-20)
 ------------------
 
