@@ -282,8 +282,6 @@ def multi_eval(gene_info, population):
     # Build raw objective information
     all_rows = []
     for indiv in population:
-        for index in indiv:
-            gene_info.frontier[index] += 1
         indiv_slice = gene_info.data_frame.loc[list(indiv)]
         indiv_sums = [indiv_slice[obj].sum() for obj in gene_info.obj_list]
         all_rows.append(indiv_sums)
@@ -299,6 +297,10 @@ def multi_eval(gene_info, population):
                                for k, v in rank_series.iteritems()))
         append_ranks = swap_index.sort_index()
         sor[obj+'_rank_norm'] = append_ranks / append_ranks.max()
+
+    # Update frontier based on elite index
+    for index in population[sor[list(sor.columns)].sum(axis=1).idxmin()]:
+        gene_info.frontier[index] += 1
 
     return sor[list(sor.columns)].sum(axis=1), obj_max
 
