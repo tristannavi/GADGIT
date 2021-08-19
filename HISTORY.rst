@@ -2,6 +2,15 @@
 History
 =======
 
+0.5.0 (2021-08-19)
+------------------
+
+* Update to stricter elitism
+* Optimize breeding pipeline
+* Add better within generation logging
+* Fix SoR implementation bug
+
+
 0.4.0 (2021-05-27)
 ------------------
 
