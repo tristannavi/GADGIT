@@ -10,6 +10,7 @@ from deap import creator
 from deap import tools
 
 from deap.algorithms import varAnd
+from deap.algorithms import varOr
 
 
 def single_eval(gene_info, individual):
@@ -191,7 +192,7 @@ def ga_single(gene_info, ga_info):
 
     random.seed(ga_info.seed)
 
-    creator.create("Fitness", base.Fitness, weights=(1.0,))
+    creator.create("Fitness", base.Fitness, weights=(-1.0,))
     creator.create("Individual", set, fitness=creator.Fitness)
 
     toolbox = base.Toolbox()
@@ -245,7 +246,7 @@ def ga_multi(gene_info, ga_info):
 
     random.seed(ga_info.seed)
 
-    creator.create("Fitness", base.Fitness, weights=(1.0,))
+    creator.create("Fitness", base.Fitness, weights=(1.0, ))
     creator.create("Individual", set, fitness=creator.Fitness)
 
     toolbox = base.Toolbox()
@@ -289,20 +290,18 @@ def multi_eval(gene_info, population):
 
     # Ranking procedure
     sor = pd.DataFrame()
-    obj_max = {}
+    obj_log_info = {}
     for obj in raw_frame.columns:
-        obj_max[obj] = raw_frame[obj].max()
+        obj_log_info[f'new_gen_max_{obj}'] = raw_frame[obj].max()
+        obj_log_info[f'new_gen_mean_{obj}'] = raw_frame[obj].mean()
         rank_series = np.argsort(raw_frame[obj])
         swap_index = pd.Series(dict((v, k)
                                for k, v in rank_series.iteritems()))
         append_ranks = swap_index.sort_index()
         sor[obj+'_rank_norm'] = append_ranks / append_ranks.max()
 
-    # Update frontier based on elite index
-    for index in population[sor[list(sor.columns)].sum(axis=1).idxmin()]:
-        gene_info.frontier[index] += 1
-
-    return sor[list(sor.columns)].sum(axis=1), obj_max
+    sor['sum'] = sor[list(sor.columns)].sum(axis=1)
+    return sor['sum'].rank(method='first'), obj_log_info
 
 
 def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen,
@@ -316,10 +315,14 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen,
     """
 
     logbook = tools.Logbook()
-    logbook.header = ['gen', 'nevals'] + (gene_info.obj_list if stats else [])
+    logbook.header = ['gen', 'nevals']
+    if stats:
+        for obj in gene_info.obj_list:
+            logbook.header.append(f'new_gen_max_{obj}')
+            logbook.header.append(f'new_gen_mean_{obj}')
 
     # Offload SoR to table
-    fit_series, obj_max = multi_eval(gene_info, population)
+    fit_series, obj_log_info = multi_eval(gene_info, population)
 
     # Update ALL fitness vals
     for index, fit_val in fit_series.items():
@@ -328,34 +331,43 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen,
     if halloffame is not None:
         halloffame.update(population)
 
-    logbook.record(gen=0, nevals='maximal-temp', **obj_max)
+    logbook.record(gen=0, nevals='maximal-temp', **obj_log_info)
     if verbose:
         print(logbook.stream)
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
-        # Select the next generation individuals
-        offspring = toolbox.select(population, len(population))
+        # Select the next generation individuals to breed
+        breed_pop = toolbox.select(population, len(population))
 
         # Vary the pool of individuals
-        offspring = varAnd(offspring, toolbox, cxpb, mutpb)
+        # offspring = varAnd(breed_pop, toolbox, cxpb, mutpb)
+        offspring = varOr(breed_pop, toolbox, len(population),cxpb, mutpb)
 
         # Offload SoR to table
-        fit_series, obj_max = multi_eval(gene_info, population)
+        fit_series, obj_log_info = multi_eval(gene_info, offspring)
 
         # Update ALL fitness vals
         for index, fit_val in fit_series.items():
-            population[index].fitness.values = fit_val,
+            offspring[index].fitness.values = fit_val,
 
         # Update the hall of fame with the generated individuals
         if halloffame is not None:
             halloffame.update(offspring)
 
-        # Replace the current population by the offspring
-        population[:] = offspring
+        # Strict elitism
+        population = tools.selBest(offspring + [halloffame[0]], len(population))
+
+        # Update frontier based on elite index
+        for index in tools.selBest(population, 1)[0]:
+            gene_info.frontier[index] += 1
+
+        # # Manually marking old individuals
+        # for indiv in population:
+        #     del indiv.fitness.values
 
         # Append the current generation statistics to the logbook
-        logbook.record(gen=gen, nevals='maximal-temp', **obj_max)
+        logbook.record(gen=gen, nevals='maximal-temp', **obj_log_info)
         if verbose:
             print(logbook.stream)
 
