@@ -25,11 +25,11 @@ def post_run(gene_info, ga_info, pop, stats, hof):
     print(buf)
     buf = 'Genes in elite: '
     for ind in sorted(list(elite)):
-        buf += gene_info.data_frame.iloc[ind]['GeneName'] + ', '
+        buf += gene_info.data_frame.loc[ind, 'GeneName'] + ', '
     print(buf)
     print('Nodes exloration count: ')
     print(gene_info.frontier)
-    missed_nodes = [gene_info.data_frame.iloc[ind]['GeneName']
+    missed_nodes = [gene_info.data_frame.loc[ind, 'GeneName']
                     for ind, x in enumerate(gene_info.frontier) if x == 0]
     print('Nodes never explored (bad): N =', len(missed_nodes))
     print(', '.join(missed_nodes))

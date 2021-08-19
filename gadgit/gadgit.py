@@ -31,7 +31,7 @@ def single_eval(gene_info, individual):
     fit_col = gene_info.obj_list[0]
     fit_sum = 0.0
     for item in individual:
-        fit_sum += gene_info.data_frame.iloc[item][fit_col]
+        fit_sum += gene_info.data_frame.loc[item, fit_col]
         # gene_info.frontier[item] += 1
 
     return fit_sum,
