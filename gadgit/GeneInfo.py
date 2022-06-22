@@ -14,7 +14,7 @@ class GeneInfo:
         -------
         frame_path, string
             Load the frame_path string into a DataFrame.
-            Should resolve to a pickled pandas DataFrame.
+            Should resolve to a csv file.
             See repository for documentation on what the format of the frame
             should be.
         obj_list, list of strings
@@ -27,7 +27,7 @@ class GeneInfo:
         """
 
         self.frame_path = frame_path
-        self.data_frame = pd.read_pickle(frame_path)
+        self.data_frame = pd.read_csv(frame_path)
         self.gene_count = self.data_frame.shape[0]
         self.obj_list = obj_list
         self.fixed_list = fixed_list
