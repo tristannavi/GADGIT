@@ -1,7 +1,6 @@
 =======
 Credits
 =======
-
 Development Lead
 ----------------
 
@@ -10,4 +9,4 @@ Development Lead
 Contributors
 ------------
 
-None yet. Why not be the first?
+* Tristan Navikevicius <tnavikevicius@brocku.ca>

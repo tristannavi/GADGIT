@@ -225,7 +225,7 @@ def ga_single(gene_info, ga_info):
     return pop, stats, hof
 
 
-def ga_multi(gene_info, ga_info):
+def ga_multi(gene_info, ga_info, mapper=map):
     """Main loop which sets DEAP objects and calls a multi objective EA algorithm.
 
     Parameters
@@ -255,6 +255,8 @@ def ga_multi(gene_info, ga_info):
                      toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", single_eval, gene_info)
+    toolbox.register("map", mapper)
+
     if len(gene_info.obj_list) < 2:
         print('Attempted to start multi objective GA with single objective.',
               file=sys.stderr)
