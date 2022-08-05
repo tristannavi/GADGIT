@@ -44,7 +44,7 @@ Basic Usage
         fixed_genes = ['BRCA1', 'AR', 'ATM', 'CHEK2', 'BRCA2', 'STK11', 'RAD51', 'PTEN', 'BARD1', 'TP53', 'RB1CC1', 'NCOA3', 'PIK3CA', 'PPM1D', 'CASP8']
         gene_info = gadgit.GeneInfo('brca.csv', ['Betweenness'], fixed_list=fixed_genes)
 
-        pop, stats, hof = gadgit.ga_single(gene_info, ga_info)
+        pop, stats, hof = gadgit.ga_multi(gene_info, ga_info)
         gadgit.post_run(gene_info, ga_info, pop, stats, hof)
 
 Customization of parameters can be found in the class documentation of the :code:`GAInfo` and :code:`GeneInfo` classes located `on the module docs <https://gadgit.readthedocs.io/en/latest/api/gadgit.html#module-gadgit.GAInfo>`_.
