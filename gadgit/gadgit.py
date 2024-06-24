@@ -9,7 +9,6 @@ from deap import base
 from deap import creator
 from deap import tools
 
-from deap.algorithms import varAnd
 from deap.algorithms import varOr
 
 
@@ -298,7 +297,7 @@ def multi_eval(gene_info, population):
         obj_log_info[f'new_gen_mean_{obj}'] = raw_frame[obj].mean()
         rank_series = np.argsort(raw_frame[obj])
         swap_index = pd.Series(dict((v, k)
-                               for k, v in rank_series.iteritems()))
+                               for k, v in rank_series.items()))
         append_ranks = swap_index.sort_index()
         sor[obj+'_rank_norm'] = append_ranks / append_ranks.max()
 

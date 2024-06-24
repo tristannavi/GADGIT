@@ -5,7 +5,7 @@ class GeneInfo:
     """This class stores information regarding a specific problem's
     biological parameters."""
 
-    def __init__(self, frame_path, obj_list, com_size=100, fixed_list=[]):
+    def __init__(self, frame_path, obj_list, com_size=100, fixed_list=None):
         """Default constructor provides control over default EA parameters.
 
         Defaults are defined above in the function header.
@@ -25,6 +25,9 @@ class GeneInfo:
             List of genes to keep fixed in the candidate solutions.
             Should be of the form of the string labels of genes.
         """
+
+        if fixed_list is None:
+            fixed_list = []
 
         self.frame_path = frame_path
         self.data_frame = pd.read_csv(frame_path)

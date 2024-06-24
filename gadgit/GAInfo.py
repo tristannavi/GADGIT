@@ -1,4 +1,4 @@
-from datetime import datetime
+import numpy as np
 
 
 class GAInfo:
@@ -6,7 +6,7 @@ class GAInfo:
 
     def __init__(self, generation=100, population=25, cross_chance=0.75,
                  mut_chance=0.25, tourn_k=3, cross_meth='sdb',
-                 seed=datetime.now()):
+                 seed=np.random.random()):
         """Default constructor provides control over default EA parameters.
 
         See defaults inside of function header.
@@ -27,7 +27,7 @@ class GAInfo:
             Crossover method. One of: sdb, ops
                 sdb: Safe dealer based
                 ops: One point safe
-        seed, 
+        seed,
             object passed to random.seed function to set seed
         """
 
