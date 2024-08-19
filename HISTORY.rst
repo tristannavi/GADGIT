@@ -2,6 +2,13 @@
 History
 =======
 
+0.7.0 (2024-08-19)
+------------------
+
+* Update dependencies
+* Add features to output reports
+
+
 0.6.0 (2022-08-15)
 ------------------
 
