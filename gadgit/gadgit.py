@@ -1,15 +1,17 @@
 import random
-import sys
+from typing import Set
 
 import numpy as np
 import pandas as pd
 
-from deap import algorithms
 from deap import base
 from deap import creator
 from deap import tools
 
 from deap.algorithms import varOr
+from deap.base import Toolbox
+
+from gadgit import GeneInfo
 
 
 def single_eval(gene_info, individual):
@@ -28,6 +30,7 @@ def single_eval(gene_info, individual):
     assert set(gene_info.fixed_list_ids).issubset(individual), \
         'Indiv does not possess all fixed genes'
 
+    # FIXME Does this just sum the whole column?
     fit_col = gene_info.obj_list[0]
     fit_sum = 0.0
     for item in individual:
@@ -64,9 +67,9 @@ def cx_SDB(gene_info, ind1, ind2):
     # Rebuild individuals and play out dealer
     ind1.clear()
     ind2.clear()
-    ind1.update(dealer[:len(dealer)//2])
+    ind1.update(dealer[:len(dealer) // 2])
     ind1.update(intersect)
-    ind2.update(dealer[len(dealer)//2:])
+    ind2.update(dealer[len(dealer) // 2:])
     ind2.update(intersect)
     assert (len(ind1) == gene_info.com_size and
             len(ind2) == gene_info.com_size), 'SDB created invalid individual'
@@ -91,7 +94,7 @@ def valid_remove(gene_info, individual):
     fixed genes
     """
     return random.choice(sorted(tuple(individual
-                                - set(gene_info.fixed_list_ids))))
+                                      - set(gene_info.fixed_list_ids))))
 
 
 def self_correction(gene_info, individual):
@@ -170,6 +173,15 @@ def indiv_builder(gene_info):
     return base_indiv
 
 
+def ga(gene_info, ga_info, mapper=map):
+    if len(gene_info.obj_list) < 1:
+        raise ValueError("You must have at least one objective to run a GA.")
+    elif len(gene_info.obj_list) == 1:
+        return ga_single(gene_info, ga_info)
+    else:
+        return ga_multi(gene_info, ga_info, mapper)
+
+
 def ga_single(gene_info, ga_info):
     """Main loop which sets DEAP objects and calls a single objective EA algorithm.
 
@@ -200,15 +212,17 @@ def ga_single(gene_info, ga_info):
                      toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", single_eval, gene_info)
-    if len(gene_info.obj_list) > 1:
-        raise AttributeError('Attempted to start single objective GA with'
-                             'multiple objectives.')
+
     if ga_info.cross_meth == 'ops':
         toolbox.register("mate", cx_OPS, gene_info)
     elif ga_info.cross_meth == 'sdb':
         toolbox.register("mate", cx_SDB, gene_info)
+    elif ga_info.cross_meth == 'both':
+        toolbox.register("mate_ops", cx_OPS, gene_info)
+        toolbox.register("mate_sdb", cx_SDB, gene_info)
     else:
         raise AttributeError('Invalid crossover string specified')
+
     toolbox.register("mutate", mut_flipper, gene_info)
     toolbox.register("select", tools.selTournament, tournsize=ga_info.nk)
 
@@ -218,13 +232,18 @@ def ga_single(gene_info, ga_info):
     stats.register("avg", np.mean, axis=0)
     stats.register("max", np.max, axis=0)
 
-    algorithms.eaSimple(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
-                        stats, halloffame=hof)
+    # FIXME does it matter if we use eaSimple or the multi-objective one?
+
+    # algorithms.eaSimple(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
+    #                     stats, halloffame=hof)
+
+    ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
+                    ga_info.gen, stats, halloffame=hof)
 
     return pop, stats, hof
 
 
-def ga_multi(gene_info, ga_info, mapper=map):
+def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
     """Main loop which sets DEAP objects and calls a multi objective EA algorithm.
 
     Parameters
@@ -245,7 +264,7 @@ def ga_multi(gene_info, ga_info, mapper=map):
 
     random.seed(ga_info.seed)
 
-    creator.create("Fitness", base.Fitness, weights=(1.0, ))
+    creator.create("Fitness", base.Fitness, weights=(1.0,))
     creator.create("Individual", set, fitness=creator.Fitness)
 
     toolbox = base.Toolbox()
@@ -254,17 +273,19 @@ def ga_multi(gene_info, ga_info, mapper=map):
                      toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", single_eval, gene_info)
+    # toolbox.register("evaluate", multi_eval, gene_info)
     toolbox.register("map", mapper)
 
-    if len(gene_info.obj_list) < 2:
-        print('Attempted to start multi objective GA with single objective.',
-              file=sys.stderr)
     if ga_info.cross_meth == 'ops':
         toolbox.register("mate", cx_OPS, gene_info)
     elif ga_info.cross_meth == 'sdb':
         toolbox.register("mate", cx_SDB, gene_info)
+    elif ga_info.cross_meth == 'both':
+        toolbox.register("mate_ops", cx_OPS, gene_info)
+        toolbox.register("mate_sdb", cx_SDB, gene_info)
     else:
         raise AttributeError('Invalid crossover string specified')
+
     toolbox.register("mutate", mut_flipper, gene_info)
     toolbox.register("select", tools.selTournament, tournsize=ga_info.nk)
 
@@ -273,8 +294,8 @@ def ga_multi(gene_info, ga_info, mapper=map):
     # Empty, as SoR objects are special
     stats = tools.Statistics()
 
-    eaSoR(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
-          ga_info.gen, stats, halloffame=hof)
+    ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
+                    ga_info.gen, stats, halloffame=hof, swap_meth=swap_meth, **kwargs)
 
     return pop, stats, hof
 
@@ -296,22 +317,32 @@ def multi_eval(gene_info, population):
         obj_log_info[f'new_gen_max_{obj}'] = raw_frame[obj].max()
         obj_log_info[f'new_gen_mean_{obj}'] = raw_frame[obj].mean()
         rank_series = np.argsort(raw_frame[obj])
-        swap_index = pd.Series(dict((v, k)
-                               for k, v in rank_series.items()))
-        append_ranks = swap_index.sort_index()
-        sor[obj+'_rank_norm'] = append_ranks / append_ranks.max()
 
+        # Flip index and argmax indices, create a series
+        swap_index = pd.Series(dict((v, k) for k, v in rank_series.items()))
+
+        # Sort by index (now argmax index)
+        append_ranks = swap_index.sort_index()
+
+        # Normalize
+        sor[obj + '_rank_norm'] = append_ranks / append_ranks.max()
+
+    # Sum the ranks
     sor['sum'] = sor[list(sor.columns)].sum(axis=1)
+
+    # Rank the sums calculated previously
     return sor['sum'].rank(method='first'), obj_log_info
 
 
-def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen,
-          stats=None, halloffame=None, verbose=__debug__):
+# ranking is relative to the population within each step
+
+def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbox, cxpb: float, mutpb: float,
+                    ngen: int, stats=None, halloffame=None, verbose=__debug__, **kwargs):
     """
-    This function runs an EA using the SoR fitness methodology.
+    This function runs an EA using the Sum of Ranks (SoR) fitness methodology.
 
     It is essentially a fork of the eaSimple function from deap.
-    It is not meant to be exposed to users and insstead is only used
+    It is not meant to be exposed to users, and instead is only used
     internally by the package.
     """
 
@@ -327,6 +358,7 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen,
 
     # Update ALL fitness vals
     for index, fit_val in fit_series.items():
+        ## Single fitness value for the whole community (all genes in the community within one individual)
         population[index].fitness.values = fit_val,
 
     if halloffame is not None:
@@ -336,6 +368,74 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen,
     if verbose:
         print(logbook.stream)
 
+    def varOr2(population: list[base], toolbox, lambda_: int, cxpb: float, mutpb: float, gen: int, ngen: int,
+               swap_percent: float) -> list[base]:
+        """
+            Implementation of a custom evolutionary algorithm that uses different crossover
+            and mutation strategies based on the generation progress. It ensures the
+            constraints on the sum of crossover and mutation probabilities and performs
+            variation operations including crossover, mutation, and reproduction on a population.
+
+            Taken from the DEAP library's algorithms.varOr function.
+
+            Parameters
+            ----------
+            population : list
+                A list of individuals representing the current generation's population.
+            toolbox : object
+                A DEAP toolbox containing crossover, mutation, and selection operators, among
+                other evolutionary operators and utilities.
+            lambda_ : int
+                The number of offspring to generate, equivalent to the size of the next
+                generation.
+            cxpb : float
+                The probability of applying the crossover operator during the variation
+                process.
+            mutpb : float
+                The probability of applying the mutation operator during the variation
+                process.
+            gen : int
+                The current generation number.
+            ngen : int
+                Number of total generations the evolutionary process is expected to run.
+
+            Returns
+            -------
+            list
+                A list of offspring generated after applying variation operations on the
+                provided population.
+
+            Raises
+            ------
+            AssertionError
+                Raised if the sum of cxpb and mutpb exceeds 1.0.
+        """
+        assert (cxpb + mutpb) <= 1.0, (
+            "The sum of the crossover and mutation probabilities must be smaller "
+            "or equal to 1.0.")
+
+        offspring = []
+        for _ in range(lambda_):
+            op_choice = random.random()
+            if op_choice < cxpb:  # Apply crossover
+                ind1, ind2 = [toolbox.clone(i) for i in random.sample(population, 2)]
+                # Logic to switch crossover method based on generation progress
+                if gen < ngen * swap_percent:
+                    ind1, ind2 = toolbox.mate_ops(ind1=ind1, ind2=ind2)
+                else:
+                    ind1, ind2 = toolbox.mate_sdb(ind1=ind1, ind2=ind2)
+                del ind1.fitness.values
+                offspring.append(ind1)
+            elif op_choice < cxpb + mutpb:  # Apply mutation
+                ind = toolbox.clone(random.choice(population))
+                ind, = toolbox.mutate(ind)
+                del ind.fitness.values
+                offspring.append(ind)
+            else:  # Apply reproduction
+                offspring.append(random.choice(population))
+
+        return offspring
+
     # Begin the generational process
     for gen in range(1, ngen + 1):
         # Select the next generation individuals to breed
@@ -343,14 +443,21 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen,
 
         # Vary the pool of individuals
         # offspring = varAnd(breed_pop, toolbox, cxpb, mutpb)
-        offspring = varOr(breed_pop, toolbox, len(population),cxpb, mutpb)
+        if kwargs.get("swap_meth", False):
+            offspring = varOr2(breed_pop, toolbox, len(population), cxpb, mutpb, gen, ngen, kwargs["swap_percent"])
+        else:
+            offspring = varOr(breed_pop, toolbox, len(population), cxpb, mutpb)
 
         # Offload SoR to table
         fit_series, obj_log_info = multi_eval(gene_info, offspring)
 
         # Update ALL fitness vals
         for index, fit_val in fit_series.items():
-            offspring[index].fitness.values = fit_val,
+            fit_val = fit_val,
+            if kwargs.get("double", False):
+                # During the last 10 generations double the fitness value
+                fit_val = ((fit_val[0] * 2),) if ngen - gen <= 20 else fit_val
+            offspring[index].fitness.values = fit_val
 
         # Update the hall of fame with the generated individuals
         if halloffame is not None:
@@ -360,6 +467,7 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen,
         population = tools.selBest(offspring + [halloffame[0]], len(population))
 
         # Update frontier based on elite index
+        ## How many times the gene has been seen
         for index in tools.selBest(population, 1)[0]:
             gene_info.frontier[index] += 1
 

@@ -40,9 +40,11 @@ class GeneInfo:
         self.frontier = [0 for x in range(self.gene_count)]
 
     def __str__(self):
-        """Return params as string."""
-
-        return "Frame path: {}\nGene Count: {}\nObjectives: {}\nCommunity {}" \
-               "\nFixed Genes: {}".format(self.frame_path, self.gene_count,
-                                          self.obj_list, self.com_size,
-                                          self.fixed_list)
+        """Return all parameters as a formatted string."""
+        return (
+            f"\tFrame path: {self.frame_path}\n"
+            f"\tGene Count: {self.gene_count}\n"
+            f"\tObjectives: {self.obj_list}\n"
+            f"\tCommunity size: {self.com_size}\n"
+            f"\tFixed Genes: {self.fixed_list}"
+        )

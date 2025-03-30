@@ -42,7 +42,12 @@ class GAInfo:
     def __str__(self):
         """Return params as string."""
 
-        return "Population: {}\nGeneration: {}\nCrossover: {}\nMutation: {}" \
-               "\nTournament: {}\nCross Method: {}\nSeed: {}" \
-               .format(self.gen, self.pop, self.cxpb, self.mutpb,
-                       self.nk, self.cross_meth, self.seed)
+        return (
+            f"\tPopulation: {self.gen}\n"
+            f"\tGeneration: {self.pop}\n"
+            f"\tCrossover: {self.cxpb}\n"
+            f"\tMutation: {self.mutpb}\n"
+            f"\tTournament: {self.nk}\n"
+            f"\tCross Method: {self.cross_meth}\n"
+            f"\tSeed: {self.seed}"
+        )

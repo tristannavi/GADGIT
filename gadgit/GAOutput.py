@@ -41,7 +41,7 @@ class GAOutput:
             buf += str(ind) + ', '
         print('Genes in elite: ')
         self.buf = [gene_info.data_frame.loc[ind, 'GeneName'] for ind in sorted(list(self.elite))]
-        print('Genes in elite: ', ",".join(self.buf))
+        print('Genes in elite: ', ", ".join(self.buf))
         print('Nodes exloration count: ')
         print(gene_info.frontier)
         self.frontier = gene_info.frontier
@@ -51,7 +51,7 @@ class GAOutput:
         print(', '.join(self.missed_nodes))
         print('Gene Info:')
         print(gene_info)
-        print('GA Info')
+        print('GA Info:')
         print(ga_info)
         print('Gene rankings including fixed genes:')
         rank_pair = zip(list(gene_info.data_frame['GeneName']), gene_info.frontier)
