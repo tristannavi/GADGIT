@@ -18,7 +18,6 @@ test_requirements = ['numpy', 'pandas', 'deap']
 
 import gadgit
 VER_STR = gadgit.__version__
-
 setup(
     author="Tyler Collins",
     author_email='tk11br@sharcnet.ca',
@@ -30,6 +29,8 @@ setup(
         'Natural Language :: English',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
     ],
     description="Genetic Algorithm for Disease Gene Identification Toolbox",
     install_requires=requirements,
@@ -46,3 +47,4 @@ setup(
     version=VER_STR,
     zip_safe=False,
 )
+
