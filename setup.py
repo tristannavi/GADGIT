@@ -17,7 +17,7 @@ setup_requirements = ['numpy', 'pandas', 'deap']
 test_requirements = ['numpy', 'pandas', 'deap']
 
 # import gadgit
-# VER_STR = gadgit.__version__
+VER_STR = 1.0
 setup(
     author="Tyler Collins",
     author_email='tk11br@sharcnet.ca',
