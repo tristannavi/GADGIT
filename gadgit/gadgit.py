@@ -1,17 +1,20 @@
 import random
+import sys
 from typing import Set
 
 import numpy as np
 import pandas as pd
 
-from deap import base
+from deap import base, algorithms
 from deap import creator
 from deap import tools
 
 from deap.algorithms import varOr
 from deap.base import Toolbox
+from numpy import mean
 
 from gadgit import GeneInfo
+from gadgit.debug import debug_1
 
 
 def single_eval(gene_info, individual):
@@ -234,11 +237,11 @@ def ga_single(gene_info, ga_info):
 
     # FIXME does it matter if we use eaSimple or the multi-objective one?
 
-    # algorithms.eaSimple(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
-    #                     stats, halloffame=hof)
+    algorithms.eaSimple(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
+                        stats, halloffame=hof)
 
-    ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
-                    ga_info.gen, stats, halloffame=hof)
+    # ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
+    #                 ga_info.gen, stats, halloffame=hof)
 
     return pop, stats, hof
 
@@ -290,14 +293,14 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
     toolbox.register("select", tools.selTournament, tournsize=ga_info.nk)
 
     pop = toolbox.population(n=ga_info.pop)
-    hof = tools.HallOfFame(1)
+    # hof = tools.HallOfFame(1)
     # Empty, as SoR objects are special
     stats = tools.Statistics()
 
-    ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
-                    ga_info.gen, stats, halloffame=hof, swap_meth=swap_meth, **kwargs)
+    _, _, hof, _ = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
+                    ga_info.gen, stats, elite=None, swap_meth=swap_meth, **kwargs)
 
-    return pop, stats, hof
+    return pop, stats, hof, temp
 
 
 def multi_eval(gene_info, population):
@@ -317,27 +320,25 @@ def multi_eval(gene_info, population):
         obj_log_info[f'new_gen_max_{obj}'] = raw_frame[obj].max()
         obj_log_info[f'new_gen_mean_{obj}'] = raw_frame[obj].mean()
         rank_series = np.argsort(raw_frame[obj])
-
         # Flip index and argmax indices, create a series
         swap_index = pd.Series(dict((v, k) for k, v in rank_series.items()))
-
         # Sort by index (now argmax index)
         append_ranks = swap_index.sort_index()
-
         # Normalize
         sor[obj + '_rank_norm'] = append_ranks / append_ranks.max()
-
     # Sum the ranks
     sor['sum'] = sor[list(sor.columns)].sum(axis=1)
-
     # Rank the sums calculated previously
     return sor['sum'].rank(method='first'), obj_log_info
 
 
 # ranking is relative to the population within each step
 
+temp = []
+
+
 def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbox, cxpb: float, mutpb: float,
-                    ngen: int, stats=None, halloffame=None, verbose=__debug__, **kwargs):
+                    ngen: int, stats=None, elite=None, verbose=__debug__, **kwargs):
     """
     This function runs an EA using the Sum of Ranks (SoR) fitness methodology.
 
@@ -361,8 +362,10 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         ## Single fitness value for the whole community (all genes in the community within one individual)
         population[index].fitness.values = fit_val,
 
-    if halloffame is not None:
-        halloffame.update(population)
+    # if halloffame is not None:
+    #     halloffame.update(population)
+
+    elite = [population[fit_series.argmin()]]
 
     logbook.record(gen=0, nevals='maximal-temp', **obj_log_info)
     if verbose:
@@ -441,6 +444,10 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         # Select the next generation individuals to breed
         breed_pop = toolbox.select(population, len(population))
 
+        if gen >= 15:
+            debug = debug_1(gene_info)
+            ...
+
         # Vary the pool of individuals
         # offspring = varAnd(breed_pop, toolbox, cxpb, mutpb)
         if kwargs.get("swap_meth", False):
@@ -453,21 +460,35 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
 
         # Update ALL fitness vals
         for index, fit_val in fit_series.items():
-            fit_val = fit_val,
-            if kwargs.get("double", False):
-                # During the last 10 generations double the fitness value
-                fit_val = ((fit_val[0] * 2),) if ngen - gen <= 20 else fit_val
-            offspring[index].fitness.values = fit_val
+            # fit_val = fit_val,
+            # if kwargs.get("double", False):
+            #     # During the last 10 generations double the fitness value
+            #     fit_val = ((fit_val[0] * 2),) if ngen - gen <= 20 else fit_val
+            offspring[index].fitness.values = fit_val,
 
         # Update the hall of fame with the generated individuals
-        if halloffame is not None:
-            halloffame.update(offspring)
+        # print(mean(fit_series))
+        # sys.exit(0)
+
+        # if halloffame is not None:
+        #     halloffame.update(offspring)
+
+        # print(fit_series)
+
+
 
         # Strict elitism
-        population = tools.selBest(offspring + [halloffame[0]], len(population))
+        # TODO halloffame[0] find min of fitseries
+        elite = [offspring[fit_series.argmin()]]
+        population = tools.selBest(offspring + [elite[0]], len(population))
 
+        buf = [gene_info.data_frame.loc[ind, 'GeneName'] for ind in sorted(list(elite[0]))]
+        temp.append(buf)
+
+        # fit_series: pd.Series
+        # fit_series.
         # Update frontier based on elite index
-        ## How many times the gene has been seen
+        ## How many times the gene has been seen?
         for index in tools.selBest(population, 1)[0]:
             gene_info.frontier[index] += 1
 
@@ -480,4 +501,4 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         if verbose:
             print(logbook.stream)
 
-    return population, logbook
+    return population, logbook, elite, temp

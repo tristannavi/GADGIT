@@ -39,12 +39,12 @@ class GAInfo:
         self.cross_meth = cross_meth
         self.seed = seed
 
-    def __str__(self):
+    def __str__(self) -> str:
         """Return params as string."""
 
         return (
-            f"\tPopulation: {self.gen}\n"
-            f"\tGeneration: {self.pop}\n"
+            f"\tPopulation: {self.pop}\n"
+            f"\tGeneration: {self.gen}\n"
             f"\tCrossover: {self.cxpb}\n"
             f"\tMutation: {self.mutpb}\n"
             f"\tTournament: {self.nk}\n"

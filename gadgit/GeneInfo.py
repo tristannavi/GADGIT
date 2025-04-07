@@ -31,11 +31,22 @@ class GeneInfo:
 
         self.frame_path = frame_path
         self.data_frame = pd.read_csv(frame_path)
+
+        if 'GeneName' not in self.data_frame.columns:
+            raise AttributeError('Dataset must contain a "GeneName" column')
+
         self.gene_count = self.data_frame.shape[0]
         self.obj_list = obj_list
         self.fixed_list = fixed_list
         self.fixed_list_ids = self.data_frame[
             self.data_frame['GeneName'].isin(fixed_list)].index.to_list()
+
+        # Reorder the dataframe so that the fixed genes appear first
+        to_appear_first = self.fixed_list_ids
+        new_index_order = [*to_appear_first, *self.data_frame.index.difference(to_appear_first)]
+        self.data_frame = self.data_frame.loc[new_index_order].reset_index(drop=True)
+        self.fixed_list_ids = [x for x in range(len(self.fixed_list))]
+
         self.com_size = com_size
         self.frontier = [0 for x in range(self.gene_count)]
 

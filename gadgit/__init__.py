@@ -8,4 +8,5 @@ from .GAInfo import GAInfo
 from .GeneInfo import GeneInfo
 from .gadgit import ga_single
 from .gadgit import ga_multi
+from .gadgit import temp
 from .GAOutput import GAOutput
