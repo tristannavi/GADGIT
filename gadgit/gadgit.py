@@ -267,7 +267,7 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
 
     random.seed(ga_info.seed)
 
-    creator.create("Fitness", base.Fitness, weights=(1.0,))
+    creator.create("Fitness", base.Fitness, weights=(-1.0,))
     creator.create("Individual", set, fitness=creator.Fitness)
 
     toolbox = base.Toolbox()
