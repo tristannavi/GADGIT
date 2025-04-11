@@ -206,7 +206,7 @@ def ga_single(gene_info, ga_info):
 
     random.seed(ga_info.seed)
 
-    creator.create("Fitness", base.Fitness, weights=(-1.0,))
+    creator.create("Fitness", base.Fitness, weights=(1.0,))
     creator.create("Individual", set, fitness=creator.Fitness)
 
     toolbox = base.Toolbox()
@@ -267,7 +267,7 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
 
     random.seed(ga_info.seed)
 
-    creator.create("Fitness", base.Fitness, weights=(-1.0,))
+    creator.create("Fitness", base.Fitness, weights=(1.0,))
     creator.create("Individual", set, fitness=creator.Fitness)
 
     toolbox = base.Toolbox()
@@ -365,7 +365,7 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
     # if halloffame is not None:
     #     halloffame.update(population)
 
-    elite = [population[fit_series.argmin()]]
+    elite = [population[fit_series.argmax()]]
 
     logbook.record(gen=0, nevals='maximal-temp', **obj_log_info)
     if verbose:
@@ -479,7 +479,7 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
 
         # Strict elitism
         # TODO halloffame[0] find min of fitseries
-        elite = [offspring[fit_series.argmin()]]
+        elite = [offspring[fit_series.argmax()]]
         population = tools.selBest(offspring + [elite[0]], len(population))
 
         buf = [gene_info.data_frame.loc[ind, 'GeneName'] for ind in sorted(list(elite[0]))]
