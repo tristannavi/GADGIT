@@ -16,8 +16,6 @@ setup_requirements = ['numpy', 'pandas', 'deap']
 
 test_requirements = ['numpy', 'pandas', 'deap']
 
-# import gadgit
-VER_STR = 1.0
 setup(
     author="Tyler Collins",
     author_email='tk11br@sharcnet.ca',
@@ -40,11 +38,10 @@ setup(
     keywords='gadgit',
     name='gadgit',
     packages=find_packages(include=['gadgit', 'gadgit.*']),
-    setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/Andesha/gadgit',
-    version=VER_STR,
+    version="8.0.0",
     zip_safe=False,
 )
 

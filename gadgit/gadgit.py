@@ -275,8 +275,8 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
     toolbox.register("individual", tools.initIterate, creator.Individual,
                      toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register("evaluate", single_eval, gene_info)
-    # toolbox.register("evaluate", multi_eval, gene_info)
+    # toolbox.register("evaluate", single_eval, gene_info)
+    toolbox.register("evaluate", multi_eval, gene_info)
     toolbox.register("map", mapper)
 
     if ga_info.cross_meth == 'ops':
@@ -293,14 +293,13 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
     toolbox.register("select", tools.selTournament, tournsize=ga_info.nk)
 
     pop = toolbox.population(n=ga_info.pop)
-    # hof = tools.HallOfFame(1)
     # Empty, as SoR objects are special
     stats = tools.Statistics()
 
-    _, _, hof, _ = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
+    _, _, hof = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
                     ga_info.gen, stats, elite=None, swap_meth=swap_meth, **kwargs)
 
-    return pop, stats, hof, temp
+    return pop, stats, hof
 
 
 def multi_eval(gene_info, population):
@@ -361,9 +360,6 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
     for index, fit_val in fit_series.items():
         ## Single fitness value for the whole community (all genes in the community within one individual)
         population[index].fitness.values = fit_val,
-
-    # if halloffame is not None:
-    #     halloffame.update(population)
 
     elite = [population[fit_series.argmax()]]
 
@@ -444,12 +440,7 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         # Select the next generation individuals to breed
         breed_pop = toolbox.select(population, len(population))
 
-        if gen >= 15:
-            debug = debug_1(gene_info)
-            ...
-
         # Vary the pool of individuals
-        # offspring = varAnd(breed_pop, toolbox, cxpb, mutpb)
         if kwargs.get("swap_meth", False):
             offspring = varOr2(breed_pop, toolbox, len(population), cxpb, mutpb, gen, ngen, kwargs["swap_percent"])
         else:
@@ -466,24 +457,10 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
             #     fit_val = ((fit_val[0] * 2),) if ngen - gen <= 20 else fit_val
             offspring[index].fitness.values = fit_val,
 
-        # Update the hall of fame with the generated individuals
-        # print(mean(fit_series))
-        # sys.exit(0)
-
-        # if halloffame is not None:
-        #     halloffame.update(offspring)
-
-        # print(fit_series)
-
-
 
         # Strict elitism
-        # TODO halloffame[0] find min of fitseries
         elite = [offspring[fit_series.argmax()]]
         population = tools.selBest(offspring + [elite[0]], len(population))
-
-        buf = [gene_info.data_frame.loc[ind, 'GeneName'] for ind in sorted(list(elite[0]))]
-        temp.append(buf)
 
         # fit_series: pd.Series
         # fit_series.
@@ -501,4 +478,4 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         if verbose:
             print(logbook.stream)
 
-    return population, logbook, elite, temp
+    return population, logbook, elite
