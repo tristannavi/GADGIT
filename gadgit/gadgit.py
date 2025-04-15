@@ -1,20 +1,13 @@
 import random
-import sys
-from typing import Set
 
 import numpy as np
 import pandas as pd
-
 from deap import base, algorithms
 from deap import creator
 from deap import tools
-
 from deap.algorithms import varOr
-from deap.base import Toolbox
-from numpy import mean
 
 from gadgit import GeneInfo
-from gadgit.debug import debug_1
 
 
 def single_eval(gene_info, individual):
@@ -296,10 +289,10 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
     # Empty, as SoR objects are special
     stats = tools.Statistics()
 
-    _, _, hof = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
-                    ga_info.gen, stats, elite=None, swap_meth=swap_meth, **kwargs)
+    _, _, hof, ranks = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
+                                ga_info.gen, stats, elite=None, swap_meth=swap_meth, **kwargs)
 
-    return pop, stats, hof
+    return pop, stats, hof, ranks
 
 
 def multi_eval(gene_info, population):
@@ -333,7 +326,7 @@ def multi_eval(gene_info, population):
 
 # ranking is relative to the population within each step
 
-temp = []
+ranks = {}
 
 
 def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbox, cxpb: float, mutpb: float,
@@ -457,7 +450,6 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
             #     fit_val = ((fit_val[0] * 2),) if ngen - gen <= 20 else fit_val
             offspring[index].fitness.values = fit_val,
 
-
         # Strict elitism
         elite = [offspring[fit_series.argmax()]]
         population = tools.selBest(offspring + [elite[0]], len(population))
@@ -466,8 +458,10 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         # fit_series.
         # Update frontier based on elite index
         ## How many times the gene has been seen?
-        for index in tools.selBest(population, 1)[0]:
+        for index in elite[0]:
             gene_info.frontier[index] += 1
+
+        ranks[gen] = {"elite": elite[0], "frontier": gene_info.frontier}
 
         # # Manually marking old individuals
         # for indiv in population:
@@ -478,4 +472,4 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         if verbose:
             print(logbook.stream)
 
-    return population, logbook, elite
+    return population, logbook, elite, ranks
