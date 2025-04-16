@@ -41,7 +41,7 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/Andesha/gadgit',
-    version="8.1.1",
+    version="8.1.2",
     zip_safe=False,
 )
 

@@ -464,7 +464,6 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         ranks[gen] = {
             "elite": elite[0],
             "frontier": gene_info.frontier,
-            "population": population,
             "fitness": fit_series,
         }
 
