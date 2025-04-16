@@ -290,7 +290,7 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
     stats = tools.Statistics()
 
     _, _, hof, ranks = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
-                                ga_info.gen, stats, elite=None, swap_meth=swap_meth, **kwargs)
+                                       ga_info.gen, stats, elite=None, swap_meth=swap_meth, **kwargs)
 
     return pop, stats, hof, ranks
 
@@ -461,7 +461,12 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         for index in elite[0]:
             gene_info.frontier[index] += 1
 
-        ranks[gen] = {"elite": elite[0], "frontier": gene_info.frontier}
+        ranks[gen] = {
+            "elite": elite[0],
+            "frontier": gene_info.frontier,
+            "population": population,
+            "fitness": fit_series,
+        }
 
         # # Manually marking old individuals
         # for indiv in population:

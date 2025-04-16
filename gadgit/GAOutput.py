@@ -26,6 +26,8 @@ class GAOutput:
             "mutation_rate": ga_info.mutpb,
             "fixed_genes": gene_info.fixed_list,
             "seed": ga_info.seed,
+            "ga_info": ga_info,
+            "gene_info": gene_info,
             **kwargs
         }
 
