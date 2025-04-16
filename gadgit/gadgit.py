@@ -434,10 +434,10 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         breed_pop = toolbox.select(population, len(population))
 
         # Vary the pool of individuals
-        if kwargs.get("swap_meth", False):
-            offspring = varOr2(breed_pop, toolbox, len(population), cxpb, mutpb, gen, ngen, kwargs["swap_percent"])
-        else:
-            offspring = varOr(breed_pop, toolbox, len(population), cxpb, mutpb)
+        # if kwargs.get("swap_meth", False):
+        #     offspring = varOr2(breed_pop, toolbox, len(population), cxpb, mutpb, gen, ngen, kwargs["swap_percent"])
+        # else:
+        offspring = varOr(breed_pop, toolbox, len(population), cxpb, mutpb)
 
         # Offload SoR to table
         fit_series, obj_log_info = multi_eval(gene_info, offspring)
