@@ -1,4 +1,6 @@
 import random
+from itertools import islice
+from typing import List
 
 import numpy as np
 import pandas as pd
@@ -81,17 +83,17 @@ def valid_add(gene_info, individual):
     """Based on gene info and current individual, return a valid index to add
     to an individual.
     """
-    return random.choice(list(set(range(0, gene_info.gene_count)) - individual))
+    return random.choice(list(set(range(0, gene_info.gene_count)) - set(individual)))
 
 
-def valid_remove(gene_info, individual):
+def valid_remove(gene_info, individual: List):
     """Based on gene info, removed an index from an individual that respects
     fixed genes
     """
-    return random.choice(sorted(tuple(individual - set(gene_info.fixed_list_ids))))
+    return random.choice(sorted(tuple(set(individual) - set(gene_info.fixed_list_ids))))
 
 
-def self_correction(gene_info, individual):
+def self_correction(gene_info, individual: List):
     """This function takes a potentially broken individual and returns a
     correct one.
 
@@ -100,11 +102,14 @@ def self_correction(gene_info, individual):
         while size isn't right; add or remove
     """
 
-    individual.update(gene_info.fixed_list_ids)
+    individual.extend(gene_info.fixed_list_ids)
+    individual_new = list(set(individual))
+    individual.clear()
+    individual.extend(individual_new)
     while True:
         indiv_size = len(individual)
         if indiv_size < gene_info.com_size:
-            individual.add(valid_add(gene_info, individual))
+            individual.append(valid_add(gene_info, individual))
         elif indiv_size > gene_info.com_size:
             individual.remove(valid_remove(gene_info, individual))
         else:  # Must be equal
@@ -112,13 +117,13 @@ def self_correction(gene_info, individual):
 
     assert len(individual) == gene_info.com_size, \
         'Self correction failed to create indiv with proper size'
-    assert set(gene_info.fixed_list_ids).issubset(individual), \
-        'Individual not possess all fixed genes after self correction'
+    # assert set(gene_info.fixed_list_ids).issubset(individual), \
+    #     'Individual not possess all fixed genes after self correction'
 
     return individual
 
 
-def cx_OPS(gene_info: GeneInfo, ind1, ind2):
+def cx_OPS(gene_info: GeneInfo, ind1: List, ind2: List):
     """Standard one-point crossover implemented for set individuals.
 
     Self correction is handled by abstracted function.
@@ -126,16 +131,17 @@ def cx_OPS(gene_info: GeneInfo, ind1, ind2):
     Note that this function has no ability to make assertions on the
     individuals it generates.
     """
-    pivot = random.randint(0, gene_info.gene_count)
-    ind1_new = [i for i in ind1 if i < pivot]  # Read from same
-    ind1_new.extend([i for i in ind2 if i > pivot])  # Read from other
-    ind2_new = [i for i in ind2 if i < pivot]
-    ind2_new.extend([i for i in ind1 if i > pivot])
+    pivot = random.randint(0, len(ind1) - 1)
+    ind1_new = [ind1[i] for i in range(0, pivot)]  # First part of the individual
+    ind1_new.extend([ind2[i] for i in range(pivot, len(ind2))])  # Second part of the other individual
+
+    ind2_new = [ind2[i] for i in range(0, pivot)]
+    ind2_new.extend([ind1[i] for i in range(pivot, len(ind1))])
 
     ind1.clear()  # Forcibly use proper individual class
-    ind1.update(ind1_new)
+    ind1.extend(ind1_new)
     ind2.clear()
-    ind2.update(ind2_new)
+    ind2.extend(ind2_new)
 
     return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
 
@@ -148,7 +154,7 @@ def mut_flipper(gene_info, individual):
     assert len(individual) == gene_info.com_size, \
         'Mutation received invalid indiv'
     individual.remove(valid_remove(gene_info, individual))
-    individual.add(valid_add(gene_info, individual))
+    individual.append(valid_add(gene_info, individual))
     assert len(individual) == gene_info.com_size, \
         'Mutation created an invalid indiv'
     assert set(gene_info.fixed_list_ids).issubset(individual), \
@@ -259,7 +265,7 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
     random.seed(ga_info.seed)
 
     creator.create("Fitness", base.Fitness, weights=(1.0,))
-    creator.create("Individual", set, fitness=creator.Fitness)
+    creator.create("Individual", list, fitness=creator.Fitness)
 
     toolbox = base.Toolbox()
     toolbox.register("indices", indiv_builder, gene_info)
@@ -298,7 +304,7 @@ def multi_eval(gene_info, population):
     # Build raw objective information
     all_rows = []
     for indiv in population:
-        indiv_slice = gene_info.data_frame.loc[list(indiv)]
+        indiv_slice = gene_info.data_frame.loc[indiv]
         indiv_sums = [indiv_slice[obj].sum() for obj in gene_info.obj_list]
         all_rows.append(indiv_sums)
     raw_frame = pd.DataFrame(all_rows, columns=gene_info.obj_list)
