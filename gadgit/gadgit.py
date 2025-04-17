@@ -81,16 +81,14 @@ def valid_add(gene_info, individual):
     """Based on gene info and current individual, return a valid index to add
     to an individual.
     """
-    return random.choice(list(set(range(0, gene_info.gene_count))
-                              - individual))
+    return random.choice(list(set(range(0, gene_info.gene_count)) - individual))
 
 
 def valid_remove(gene_info, individual):
     """Based on gene info, removed an index from an individual that respects
     fixed genes
     """
-    return random.choice(sorted(tuple(individual
-                                      - set(gene_info.fixed_list_ids))))
+    return random.choice(sorted(tuple(individual - set(gene_info.fixed_list_ids))))
 
 
 def self_correction(gene_info, individual):
@@ -120,7 +118,7 @@ def self_correction(gene_info, individual):
     return individual
 
 
-def cx_OPS(gene_info, ind1, ind2):
+def cx_OPS(gene_info: GeneInfo, ind1, ind2):
     """Standard one-point crossover implemented for set individuals.
 
     Self correction is handled by abstracted function.

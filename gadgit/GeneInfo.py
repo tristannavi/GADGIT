@@ -42,10 +42,10 @@ class GeneInfo:
             self.data_frame['GeneName'].isin(fixed_list)].index.to_list()
 
         # Reorder the dataframe so that the fixed genes appear first
-        to_appear_first = self.fixed_list_ids
-        new_index_order = [*to_appear_first, *self.data_frame.index.difference(to_appear_first)]
-        self.data_frame = self.data_frame.loc[new_index_order].reset_index(drop=True)
-        self.fixed_list_ids = [x for x in range(len(self.fixed_list))]
+        # to_appear_first = self.fixed_list_ids
+        # new_index_order = [*to_appear_first, *self.data_frame.index.difference(to_appear_first)]
+        # self.data_frame = self.data_frame.loc[new_index_order].reset_index(drop=True)
+        # self.fixed_list_ids = [x for x in range(len(self.fixed_list))]
 
         self.com_size = com_size
         self.frontier = [0 for x in range(self.gene_count)]
