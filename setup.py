@@ -10,11 +10,11 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = ['numpy', 'pandas', 'deap']
+requirements = []
 
-setup_requirements = ['numpy', 'pandas', 'deap']
+setup_requirements = []
 
-test_requirements = ['numpy', 'pandas', 'deap']
+test_requirements = []
 
 VER_STR = "0.6.0"
 
