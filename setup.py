@@ -16,8 +16,7 @@ setup_requirements = ['numpy', 'pandas', 'deap']
 
 test_requirements = ['numpy', 'pandas', 'deap']
 
-import gadgit
-VER_STR = gadgit.__version__
+VER_STR = "0.6.0"
 
 setup(
     author="Tyler Collins",
