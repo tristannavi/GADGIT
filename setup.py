@@ -16,7 +16,7 @@ setup_requirements = []
 
 test_requirements = []
 
-VER_STR = "0.6.0"
+VER_STR = "0.6.1"
 
 setup(
     author="Tyler Collins",
