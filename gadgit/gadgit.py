@@ -171,7 +171,7 @@ def indiv_builder(gene_info):
     return base_indiv
 
 
-def ga_single(gene_info, ga_info):
+def ga_single(gene_info, ga_info, mapper=map):
     """Main loop which sets DEAP objects and calls a single objective EA algorithm.
 
     Parameters
@@ -201,6 +201,8 @@ def ga_single(gene_info, ga_info):
                      toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("evaluate", single_eval, gene_info)
+    toolbox.register("map", mapper)
+
     if len(gene_info.obj_list) > 1:
         raise AttributeError('Attempted to start single objective GA with'
                              'multiple objectives.')
@@ -254,7 +256,7 @@ def ga_multi(gene_info, ga_info, mapper=map):
     toolbox.register("individual", tools.initIterate, creator.Individual,
                      toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register("evaluate", single_eval, gene_info)
+    toolbox.register("evaluate", multi_eval, gene_info)
     toolbox.register("map", mapper)
 
     if len(gene_info.obj_list) < 2:
