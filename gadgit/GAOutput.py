@@ -47,7 +47,7 @@ class GAOutput:
         if 'GeneName' not in gene_info.data_frame.columns:
             raise AttributeError('Dataset must contain a "GeneName" column')
 
-        self.elite = hof[0]
+        self.elite = set(hof[0])
         print('Size: ', len(self.elite))
         buf = 'Index in elite: '
 
