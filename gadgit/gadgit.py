@@ -192,7 +192,7 @@ def ga_single(gene_info, ga_info, mapper=map):
 
     random.seed(ga_info.seed)
 
-    creator.create("Fitness", base.Fitness, weights=(-1.0,))
+    creator.create("Fitness", base.Fitness, weights=(1.0,))
     creator.create("Individual", set, fitness=creator.Fitness)
 
     toolbox = base.Toolbox()
@@ -248,7 +248,7 @@ def ga_multi(gene_info, ga_info, mapper=map):
 
     random.seed(ga_info.seed)
 
-    creator.create("Fitness", base.Fitness, weights=(1.0, ))
+    creator.create("Fitness", base.Fitness, weights=(-1.0, ))
     creator.create("Individual", set, fitness=creator.Fitness)
 
     toolbox = base.Toolbox()
