@@ -256,7 +256,7 @@ def ga_multi(gene_info, ga_info, mapper=map):
     toolbox.register("individual", tools.initIterate, creator.Individual,
                      toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register("evaluate", multi_eval, gene_info)
+    # toolbox.register("evaluate", multi_eval, gene_info)
     toolbox.register("map", mapper)
 
     if len(gene_info.obj_list) < 2:
@@ -279,10 +279,11 @@ def ga_multi(gene_info, ga_info, mapper=map):
     eaSoR(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
           ga_info.gen, stats, halloffame=hof)
 
-    return pop, stats, hof
+    return pop, stats, hof, sor_full
 
+sor_full = None
 
-def multi_eval(gene_info, population):
+def multi_eval(gene_info, population, gen):
     """Helper function to implement the SoR table operations."""
     # Build raw objective information
     all_rows = []
@@ -305,6 +306,14 @@ def multi_eval(gene_info, population):
         sor[obj+'_rank_norm'] = append_ranks / append_ranks.max()
 
     sor['sum'] = sor[list(sor.columns)].sum(axis=1)
+
+    temp = sor['sum'].rank(method='first')
+
+    global sor_full
+    if sor_full is None:
+        sor_full = sor
+    else:
+        sor_full["Betweenness" + '_rank_norm_' + str(gen)] = sor["Betweenness" + '_rank_norm']
     return sor['sum'].rank(method='first'), obj_log_info
 
 
@@ -326,7 +335,7 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen,
             logbook.header.append(f'new_gen_mean_{obj}')
 
     # Offload SoR to table
-    fit_series, obj_log_info = multi_eval(gene_info, population)
+    fit_series, obj_log_info = multi_eval(gene_info, population, 0)
 
     # Update ALL fitness vals
     for index, fit_val in fit_series.items():
@@ -349,7 +358,7 @@ def eaSoR(ga_info, gene_info, population, toolbox, cxpb, mutpb, ngen,
         offspring = varOr(breed_pop, toolbox, len(population),cxpb, mutpb)
 
         # Offload SoR to table
-        fit_series, obj_log_info = multi_eval(gene_info, offspring)
+        fit_series, obj_log_info = multi_eval(gene_info, offspring, gen)
 
         # Update ALL fitness vals
         for index, fit_val in fit_series.items():
