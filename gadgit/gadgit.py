@@ -273,7 +273,7 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
                      toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     # toolbox.register("evaluate", single_eval, gene_info)
-    toolbox.register("evaluate", multi_eval, gene_info)
+    # toolbox.register("evaluate", multi_eval, gene_info)
     toolbox.register("map", mapper)
 
     if ga_info.cross_meth == 'ops':
@@ -296,10 +296,11 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
     _, _, hof, ranks = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
                                        ga_info.gen, stats, elite=None, swap_meth=swap_meth, **kwargs)
 
-    return pop, stats, hof, ranks
+    return pop, stats, hof, sor_full#, ranks
 
+sor_full = None
 
-def multi_eval(gene_info, population):
+def multi_eval(gene_info, population, gen):
     """Helper function to implement the SoR table operations."""
     # Build raw objective information
     all_rows = []
@@ -325,6 +326,14 @@ def multi_eval(gene_info, population):
     # Sum the ranks
     sor['sum'] = sor[list(sor.columns)].sum(axis=1)
     # Rank the sums calculated previously
+    temp: pd.DataFrame
+    temp = sor['sum'].rank(method='first')
+
+    global sor_full
+    if sor_full is None:
+        sor_full = sor
+    else:
+        sor_full["Betweenness" +'_rank_norm_' + str(gen)] = sor["Betweenness" + '_rank_norm']
     return sor['sum'].rank(method='first'), obj_log_info
 
 
@@ -351,7 +360,7 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
             logbook.header.append(f'new_gen_mean_{obj}')
 
     # Offload SoR to table
-    fit_series, obj_log_info = multi_eval(gene_info, population)
+    fit_series, obj_log_info = multi_eval(gene_info, population, 0)
 
     # Update ALL fitness vals
     for index, fit_val in fit_series.items():
@@ -444,7 +453,7 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         offspring = varOr(breed_pop, toolbox, len(population), cxpb, mutpb)
 
         # Offload SoR to table
-        fit_series, obj_log_info = multi_eval(gene_info, offspring)
+        fit_series, obj_log_info = multi_eval(gene_info, offspring, gen)
 
         # Update ALL fitness vals
         for index, fit_val in fit_series.items():
