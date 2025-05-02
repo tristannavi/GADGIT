@@ -1,5 +1,4 @@
 import random
-from itertools import islice
 from typing import List
 
 import numpy as np
@@ -21,12 +20,14 @@ def single_eval(gene_info, individual):
     is treated as the 'single' objective.
 
     Note: does not correctly calculate the frontier.
+
+    Largest sum is the best.
     """
 
-    assert len(individual) == gene_info.com_size, \
-        'Indiv does not match community size in eval'
-    assert set(gene_info.fixed_list_ids).issubset(individual), \
-        'Indiv does not possess all fixed genes'
+    # assert len(individual) == gene_info.com_size, \
+    #     'Indiv does not match community size in eval'
+    # assert set(gene_info.fixed_list_ids).issubset(individual), \
+    #     'Indiv does not possess all fixed genes'
 
     # FIXME Does this just sum the whole column?
     fit_col = gene_info.obj_list[0]
@@ -243,6 +244,9 @@ def ga_single(gene_info, ga_info):
     return pop, stats, hof
 
 
+debug = False
+
+
 def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
     """Main loop which sets DEAP objects and calls a multi objective EA algorithm.
 
@@ -262,6 +266,10 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
     See post_run function for examples of how to interpret results.
     """
 
+    if kwargs.get("debug", False):
+        global debug
+        debug = True
+
     random.seed(ga_info.seed)
 
     creator.create("Fitness", base.Fitness, weights=(1.0,))
@@ -272,8 +280,6 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
     toolbox.register("individual", tools.initIterate, creator.Individual,
                      toolbox.indices)
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    # toolbox.register("evaluate", single_eval, gene_info)
-    # toolbox.register("evaluate", multi_eval, gene_info)
     toolbox.register("map", mapper)
 
     if ga_info.cross_meth == 'ops':
@@ -296,11 +302,13 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
     _, _, hof, ranks = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
                                        ga_info.gen, stats, elite=None, swap_meth=swap_meth, **kwargs)
 
-    return pop, stats, hof, sor_full#, ranks
+    return pop, stats, hof, sor_full  # , ranks
+
 
 sor_full = None
 
-def multi_eval(gene_info, population, gen):
+
+def multi(gene_info, population):
     """Helper function to implement the SoR table operations."""
     # Build raw objective information
     all_rows = []
@@ -326,15 +334,78 @@ def multi_eval(gene_info, population, gen):
     # Sum the ranks
     sor['sum'] = sor[list(sor.columns)].sum(axis=1)
     # Rank the sums calculated previously
-    temp: pd.DataFrame
-    temp = sor['sum'].rank(method='first')
+    # temp: pd.DataFrame
+    # temp = sor['sum'].rank(method='first')
 
-    global sor_full
-    if sor_full is None:
-        sor_full = sor
-    else:
-        sor_full["Betweenness" +'_rank_norm_' + str(gen)] = sor["Betweenness" + '_rank_norm']
-    return sor['sum'].rank(method='first'), obj_log_info
+    rank_series2 = rank_series
+    swap_index2 = swap_index
+    append_ranks2 = append_ranks
+    summation = sor[list(sor.columns)].sum(axis=1)
+    first_ranking = sor['sum'].rank(method='first')
+    append_ranks_max = append_ranks.max()
+    append_ranks_min = append_ranks.min()
+    single = [single_eval(gene_info, population[x]) for x in range(len(population))]
+    single_min = np.array(single).flatten()[np.array(single).flatten().argmin()], np.array(
+        single).flatten().argmin()
+    single_max = np.array(single).flatten()[np.array(single).flatten().argmax()], np.array(
+        single).flatten().argmax()
+
+    return sor['sum'].rank(method='first'), sor["sum"]
+
+
+def multi_eval(gene_info, population):
+    """Helper function to implement the SoR table operations."""
+    # Build raw objective information
+    all_rows = np.ndarray(shape=(len(population), len(gene_info.obj_list)))
+    for index, indiv in enumerate(population):
+        indiv_slice = gene_info.data_frame[gene_info.obj_list].to_numpy()[indiv]
+        indiv_sums = indiv_slice.sum(axis=0)
+        all_rows[index] = indiv_sums
+
+    # Ranking procedure
+    sor = np.ndarray(shape=(len(population), len(gene_info.obj_list)))
+    obj_log_info = {}
+    for i, obj in enumerate(gene_info.obj_list):
+        obj_log_info[f'new_gen_max_{obj}'] = all_rows[:, i].max()
+        obj_log_info[f'new_gen_mean_{obj}'] = all_rows[:, i].mean()
+        rank_series = np.argsort(all_rows[:, i])
+        # Flip index and argmax indices, create a series
+        # swap_index = np.vstack((np.argsort(all_rows[:,i]), np.arange(25))).T
+
+        # Sort by index (now argmax index)
+        append_ranks = np.arange(25)[np.argsort(all_rows[:, i]).argsort()].T
+        # Normalize
+        sor[:, i] = append_ranks / append_ranks.max()
+        ...
+    # Sum the ranks
+    objective_sums = sor.sum(axis=1)
+    # Rank the sums calculated previously
+    # temp: pd.DataFrame
+    # temp = sor['sum'].rank(method='first')
+    #
+    # global sor_full
+    # if sor_full is None:
+    #     sor_full = sor
+    # else:
+    #     sor_full["Betweenness" + '_rank_norm_' + str(gen)] = sor["Betweenness" + '_rank_norm']
+    #
+    # if kwargs.get("debug", True):
+    #     rank_series2 = rank_series
+    #     swap_index2 = swap_index
+    #     append_ranks2 = append_ranks
+    #     summation = sor[list(sor.columns)].sum(axis=1)
+    #     first_ranking = sor['sum'].rank(method='first')
+    #     append_ranks_max = append_ranks.max()
+    #     append_ranks_min = append_ranks.min()
+    #     single = [single_eval(gene_info, population[x]) for x in range(len(population))]
+    #     single_min = np.array(single).flatten()[np.array(single).flatten().argmin()], np.array(
+    #         single).flatten().argmin()
+    #     single_max = np.array(single).flatten()[np.array(single).flatten().argmax()], np.array(
+    #         single).flatten().argmax()
+    #     ...
+    # temp, temp_ = multi(gene_info, population)
+    # sor['sum']: pd.Series
+    return np.argsort(objective_sums), obj_log_info
 
 
 # ranking is relative to the population within each step
@@ -360,10 +431,11 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
             logbook.header.append(f'new_gen_mean_{obj}')
 
     # Offload SoR to table
+    fit_series: np.ndarray
     fit_series, obj_log_info = multi_eval(gene_info, population, 0)
 
     # Update ALL fitness vals
-    for index, fit_val in fit_series.items():
+    for index, fit_val in enumerate(fit_series):
         ## Single fitness value for the whole community (all genes in the community within one individual)
         population[index].fitness.values = fit_val,
 
@@ -456,12 +528,13 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         fit_series, obj_log_info = multi_eval(gene_info, offspring, gen)
 
         # Update ALL fitness vals
-        for index, fit_val in fit_series.items():
+        for index, fit_val in enumerate(fit_series):
             # fit_val = fit_val,
             # if kwargs.get("double", False):
             #     # During the last 10 generations double the fitness value
             #     fit_val = ((fit_val[0] * 2),) if ngen - gen <= 20 else fit_val
             offspring[index].fitness.values = fit_val,
+        ...
 
         # Strict elitism
         elite = [offspring[fit_series.argmax()]]
@@ -474,11 +547,11 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         for index in elite[0]:
             gene_info.frontier[index] += 1
 
-        ranks[gen] = {
-            "elite": elite[0],
-            "frontier": gene_info.frontier,
-            "fitness": fit_series,
-        }
+        # ranks[gen] = {
+        #     "elite": elite[0],
+        #     "frontier": gene_info.frontier,
+        #     "fitness": fit_series,
+        # }
 
         # # Manually marking old individuals
         # for indiv in population:
