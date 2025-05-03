@@ -353,7 +353,7 @@ def multi(gene_info, population):
     return sor['sum'].rank(method='first'), sor["sum"]
 
 
-def multi_eval(gene_info, population):
+def multi_eval(gene_info, population, gen):
     """Helper function to implement the SoR table operations."""
     # Build raw objective information
     all_rows = np.ndarray(shape=(len(population), len(gene_info.obj_list)))
