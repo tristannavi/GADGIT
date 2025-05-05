@@ -373,7 +373,7 @@ def multi_eval(gene_info, population, gen):
         # swap_index = np.vstack((np.argsort(all_rows[:,i]), np.arange(25))).T
 
         # Sort by index (now argmax index)
-        append_ranks = np.arange(25)[np.argsort(all_rows[:, i]).argsort()].T
+        append_ranks = np.arange(len(population))[np.argsort(all_rows[:, i]).argsort()].T
         # Normalize
         sor[:, i] = append_ranks / append_ranks.max()
         ...
