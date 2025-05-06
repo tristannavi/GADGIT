@@ -1,4 +1,5 @@
 import random
+from collections.abc import Callable
 from typing import List
 
 import numpy as np
@@ -7,8 +8,10 @@ from deap import base, algorithms
 from deap import creator
 from deap import tools
 from deap.algorithms import varOr
+from numpy import ndarray
+from scipy.stats import rankdata
 
-from gadgit import GeneInfo
+from gadgit import GeneInfo, GAInfo
 
 
 def single_eval(gene_info, individual):
@@ -247,7 +250,7 @@ def ga_single(gene_info, ga_info):
 debug = False
 
 
-def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
+def ga_multi(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: bool = False, **kwargs):
     """Main loop which sets DEAP objects and calls a multi objective EA algorithm.
 
     Parameters
@@ -265,10 +268,6 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
 
     See post_run function for examples of how to interpret results.
     """
-
-    if kwargs.get("debug", False):
-        global debug
-        debug = True
 
     random.seed(ga_info.seed)
 
@@ -299,13 +298,13 @@ def ga_multi(gene_info, ga_info, mapper=map, swap_meth=False, **kwargs):
     # Empty, as SoR objects are special
     stats = tools.Statistics()
 
-    _, _, hof, ranks = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
-                                       ga_info.gen, stats, elite=None, swap_meth=swap_meth, **kwargs)
+    _, _, hof = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
+                                ga_info.gen, stats, elite=None)
 
-    return pop, stats, hof, sor_full  # , ranks
+    return pop, stats, hof, extra_returns
 
 
-sor_full = None
+extra_returns = {}
 
 
 def multi(gene_info, population):
@@ -353,7 +352,7 @@ def multi(gene_info, population):
     return sor['sum'].rank(method='first'), sor["sum"]
 
 
-def multi_eval(gene_info, population, gen):
+def multi_eval(gene_info: GeneInfo, population: List[int], gen: int) -> tuple[ndarray, dict]:
     """Helper function to implement the SoR table operations."""
     # Build raw objective information
     all_rows = np.ndarray(shape=(len(population), len(gene_info.obj_list)))
@@ -370,47 +369,14 @@ def multi_eval(gene_info, population, gen):
         obj_log_info[f'new_gen_mean_{obj}'] = all_rows[:, i].mean()
         rank_series = np.argsort(all_rows[:, i])
         # Flip index and argmax indices, create a series
-        # swap_index = np.vstack((np.argsort(all_rows[:,i]), np.arange(25))).T
-
         # Sort by index (now argmax index)
         append_ranks = np.arange(len(population))[np.argsort(all_rows[:, i]).argsort()].T
         # Normalize
         sor[:, i] = append_ranks / append_ranks.max()
-        ...
     # Sum the ranks
     objective_sums = sor.sum(axis=1)
-    # Rank the sums calculated previously
-    # temp: pd.DataFrame
-    # temp = sor['sum'].rank(method='first')
-    #
-    # global sor_full
-    # if sor_full is None:
-    #     sor_full = sor
-    # else:
-    #     sor_full["Betweenness" + '_rank_norm_' + str(gen)] = sor["Betweenness" + '_rank_norm']
-    #
-    # if kwargs.get("debug", True):
-    #     rank_series2 = rank_series
-    #     swap_index2 = swap_index
-    #     append_ranks2 = append_ranks
-    #     summation = sor[list(sor.columns)].sum(axis=1)
-    #     first_ranking = sor['sum'].rank(method='first')
-    #     append_ranks_max = append_ranks.max()
-    #     append_ranks_min = append_ranks.min()
-    #     single = [single_eval(gene_info, population[x]) for x in range(len(population))]
-    #     single_min = np.array(single).flatten()[np.array(single).flatten().argmin()], np.array(
-    #         single).flatten().argmin()
-    #     single_max = np.array(single).flatten()[np.array(single).flatten().argmax()], np.array(
-    #         single).flatten().argmax()
-    #     ...
-    # temp, temp_ = multi(gene_info, population)
-    # sor['sum']: pd.Series
-    return np.argsort(objective_sums), obj_log_info
-
-
-# ranking is relative to the population within each step
-
-ranks = {}
+    # TODO: handle ties
+    return rankdata(objective_sums), obj_log_info
 
 
 def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbox, cxpb: float, mutpb: float,
@@ -516,25 +482,19 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
     # Begin the generational process
     for gen in range(1, ngen + 1):
         # Select the next generation individuals to breed
+        # TODO: select pop-1 and add elite
         breed_pop = toolbox.select(population, len(population))
 
-        # Vary the pool of individuals
-        # if kwargs.get("swap_meth", False):
-        #     offspring = varOr2(breed_pop, toolbox, len(population), cxpb, mutpb, gen, ngen, kwargs["swap_percent"])
-        # else:
         offspring = varOr(breed_pop, toolbox, len(population), cxpb, mutpb)
+
+        # TODO maybe no mutation on elite or at least ensure elite is there for fitness calc
 
         # Offload SoR to table
         fit_series, obj_log_info = multi_eval(gene_info, offspring, gen)
 
         # Update ALL fitness vals
         for index, fit_val in enumerate(fit_series):
-            # fit_val = fit_val,
-            # if kwargs.get("double", False):
-            #     # During the last 10 generations double the fitness value
-            #     fit_val = ((fit_val[0] * 2),) if ngen - gen <= 20 else fit_val
             offspring[index].fitness.values = fit_val,
-        ...
 
         # Strict elitism
         elite = [offspring[fit_series.argmax()]]
@@ -562,4 +522,4 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         if verbose:
             print(logbook.stream)
 
-    return population, logbook, elite, ranks
+    return population, logbook, elite
