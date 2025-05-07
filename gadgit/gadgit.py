@@ -336,28 +336,28 @@ def multi(gene_info, population):
     # temp: pd.DataFrame
     # temp = sor['sum'].rank(method='first')
 
-    rank_series2 = rank_series
-    swap_index2 = swap_index
-    append_ranks2 = append_ranks
-    summation = sor[list(sor.columns)].sum(axis=1)
-    first_ranking = sor['sum'].rank(method='first')
-    append_ranks_max = append_ranks.max()
-    append_ranks_min = append_ranks.min()
-    single = [single_eval(gene_info, population[x]) for x in range(len(population))]
-    single_min = np.array(single).flatten()[np.array(single).flatten().argmin()], np.array(
-        single).flatten().argmin()
-    single_max = np.array(single).flatten()[np.array(single).flatten().argmax()], np.array(
-        single).flatten().argmax()
+    # rank_series2 = rank_series
+    # swap_index2 = swap_index
+    # append_ranks2 = append_ranks
+    # summation = sor[list(sor.columns)].sum(axis=1)
+    # first_ranking = sor['sum'].rank(method='first')
+    # append_ranks_max = append_ranks.max()
+    # append_ranks_min = append_ranks.min()
+    # single = [single_eval(gene_info, population[x]) for x in range(len(population))]
+    # single_min = np.array(single).flatten()[np.array(single).flatten().argmin()], np.array(
+    #     single).flatten().argmin()
+    # single_max = np.array(single).flatten()[np.array(single).flatten().argmax()], np.array(
+    #     single).flatten().argmax()
 
     return sor['sum'].rank(method='first'), sor["sum"]
 
 
-def multi_eval(gene_info: GeneInfo, population: List[int], gen: int) -> tuple[ndarray, dict]:
+def multi_eval(gene_info: GeneInfo, population: List[int], *args) -> tuple[ndarray, dict]:
     """Helper function to implement the SoR table operations."""
     # Build raw objective information
-    all_rows = np.ndarray(shape=(len(population), len(gene_info.obj_list)))
+    all_rows = np.zeros(shape=(len(population), len(gene_info.obj_list)))
     for index, indiv in enumerate(population):
-        indiv_slice = gene_info.data_frame[gene_info.obj_list].to_numpy()[indiv]
+        indiv_slice = gene_info.data_numpy[indiv]
         indiv_sums = indiv_slice.sum(axis=0)
         all_rows[index] = indiv_sums
 
@@ -367,7 +367,7 @@ def multi_eval(gene_info: GeneInfo, population: List[int], gen: int) -> tuple[nd
     for i, obj in enumerate(gene_info.obj_list):
         obj_log_info[f'new_gen_max_{obj}'] = all_rows[:, i].max()
         obj_log_info[f'new_gen_mean_{obj}'] = all_rows[:, i].mean()
-        rank_series = np.argsort(all_rows[:, i])
+        # rank_series = np.argsort(all_rows[:, i])
         # Flip index and argmax indices, create a series
         # Sort by index (now argmax index)
         append_ranks = np.arange(len(population))[np.argsort(all_rows[:, i]).argsort()].T
@@ -375,7 +375,6 @@ def multi_eval(gene_info: GeneInfo, population: List[int], gen: int) -> tuple[nd
         sor[:, i] = append_ranks / append_ranks.max()
     # Sum the ranks
     objective_sums = sor.sum(axis=1)
-    # TODO: handle ties
     return rankdata(objective_sums), obj_log_info
 
 
@@ -405,79 +404,11 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         ## Single fitness value for the whole community (all genes in the community within one individual)
         population[index].fitness.values = fit_val,
 
-    elite = [population[fit_series.argmax()]]
+    elite = [population[fit_series.argmax()] if population[fit_series.argmax()].fitness > elite[0].fitness else elite[0]]
 
     logbook.record(gen=0, nevals='maximal-temp', **obj_log_info)
     if verbose:
         print(logbook.stream)
-
-    def varOr2(population: list[base], toolbox, lambda_: int, cxpb: float, mutpb: float, gen: int, ngen: int,
-               swap_percent: float) -> list[base]:
-        """
-            Implementation of a custom evolutionary algorithm that uses different crossover
-            and mutation strategies based on the generation progress. It ensures the
-            constraints on the sum of crossover and mutation probabilities and performs
-            variation operations including crossover, mutation, and reproduction on a population.
-
-            Taken from the DEAP library's algorithms.varOr function.
-
-            Parameters
-            ----------
-            population : list
-                A list of individuals representing the current generation's population.
-            toolbox : object
-                A DEAP toolbox containing crossover, mutation, and selection operators, among
-                other evolutionary operators and utilities.
-            lambda_ : int
-                The number of offspring to generate, equivalent to the size of the next
-                generation.
-            cxpb : float
-                The probability of applying the crossover operator during the variation
-                process.
-            mutpb : float
-                The probability of applying the mutation operator during the variation
-                process.
-            gen : int
-                The current generation number.
-            ngen : int
-                Number of total generations the evolutionary process is expected to run.
-
-            Returns
-            -------
-            list
-                A list of offspring generated after applying variation operations on the
-                provided population.
-
-            Raises
-            ------
-            AssertionError
-                Raised if the sum of cxpb and mutpb exceeds 1.0.
-        """
-        assert (cxpb + mutpb) <= 1.0, (
-            "The sum of the crossover and mutation probabilities must be smaller "
-            "or equal to 1.0.")
-
-        offspring = []
-        for _ in range(lambda_):
-            op_choice = random.random()
-            if op_choice < cxpb:  # Apply crossover
-                ind1, ind2 = [toolbox.clone(i) for i in random.sample(population, 2)]
-                # Logic to switch crossover method based on generation progress
-                if gen < ngen * swap_percent:
-                    ind1, ind2 = toolbox.mate_ops(ind1=ind1, ind2=ind2)
-                else:
-                    ind1, ind2 = toolbox.mate_sdb(ind1=ind1, ind2=ind2)
-                del ind1.fitness.values
-                offspring.append(ind1)
-            elif op_choice < cxpb + mutpb:  # Apply mutation
-                ind = toolbox.clone(random.choice(population))
-                ind, = toolbox.mutate(ind)
-                del ind.fitness.values
-                offspring.append(ind)
-            else:  # Apply reproduction
-                offspring.append(random.choice(population))
-
-        return offspring
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
@@ -498,13 +429,13 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
 
         # Strict elitism
         elite = [offspring[fit_series.argmax()]]
-        population = tools.selBest(offspring + [elite[0]], len(population))
+        population = tools.selBest(offspring, len(population) - 1) + [elite[0]]
 
         # fit_series: pd.Series
         # fit_series.
         # Update frontier based on elite index
         ## How many times the gene has been seen?
-        for index in elite[0]:
+        for index in tools.selBest(population, 1)[0]:
             gene_info.frontier[index] += 1
 
         # ranks[gen] = {

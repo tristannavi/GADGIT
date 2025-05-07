@@ -31,6 +31,7 @@ class GeneInfo:
 
         self.frame_path = frame_path
         self.data_frame = pd.read_csv(frame_path)
+        self.data_numpy = self.data_frame[obj_list].to_numpy()
 
         if 'GeneName' not in self.data_frame.columns:
             raise AttributeError('Dataset must contain a "GeneName" column')
