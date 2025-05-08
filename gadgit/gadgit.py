@@ -362,20 +362,18 @@ def multi_eval(gene_info: GeneInfo, population: List[int], *args) -> tuple[ndarr
         all_rows[index] = indiv_sums
 
     # Ranking procedure
-    sor = np.ndarray(shape=(len(population), len(gene_info.obj_list)))
+    sor = np.zeros(shape=(len(population), len(gene_info.obj_list)))
     obj_log_info = {}
     for i, obj in enumerate(gene_info.obj_list):
         obj_log_info[f'new_gen_max_{obj}'] = all_rows[:, i].max()
         obj_log_info[f'new_gen_mean_{obj}'] = all_rows[:, i].mean()
-        # rank_series = np.argsort(all_rows[:, i])
-        # Flip index and argmax indices, create a series
-        # Sort by index (now argmax index)
-        append_ranks = np.arange(len(population))[np.argsort(all_rows[:, i]).argsort()].T
+        append_ranks = rankdata(all_rows[:, i], method="dense")
         # Normalize
         sor[:, i] = append_ranks / append_ranks.max()
+        ...
     # Sum the ranks
     objective_sums = sor.sum(axis=1)
-    return rankdata(objective_sums), obj_log_info
+    return rankdata(objective_sums, method="dense"), obj_log_info
 
 
 def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbox, cxpb: float, mutpb: float,
