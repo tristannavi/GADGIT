@@ -404,8 +404,7 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         ## Single fitness value for the whole community (all genes in the community within one individual)
         population[index].fitness.values = fit_val,
 
-    elite = [population[fit_series.argmax()] if population[fit_series.argmax()].fitness > elite[0].fitness else elite[0]]
-
+    elite = [population[fit_series.argmax()]]
     logbook.record(gen=0, nevals='maximal-temp', **obj_log_info)
     if verbose:
         print(logbook.stream)
@@ -428,7 +427,7 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
             offspring[index].fitness.values = fit_val,
 
         # Strict elitism
-        elite = [offspring[fit_series.argmax()]]
+        elite = [offspring[fit_series.argmax()] if offspring[fit_series.argmax()].fitness > elite[0].fitness else elite[0]]
         population = tools.selBest(offspring, len(population) - 1) + [elite[0]]
 
         # fit_series: pd.Series
