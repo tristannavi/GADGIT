@@ -7,7 +7,7 @@ import pandas as pd
 from deap import base, algorithms
 from deap import creator
 from deap import tools
-from deap.algorithms import varOr
+from deap.algorithms import varOr, varAnd
 from numpy import ndarray
 from scipy.stats import rankdata
 
@@ -412,7 +412,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         # TODO: select pop-1 and add elite
         breed_pop = toolbox.select(population, len(population))
 
-        offspring = varOr(breed_pop, toolbox, len(population), cxpb, mutpb)
+        offspring = varAnd(breed_pop, toolbox, cxpb, mutpb)
 
         # TODO maybe no mutation on elite or at least ensure elite is there for fitness calc
 
