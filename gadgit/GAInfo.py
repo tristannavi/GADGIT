@@ -4,9 +4,9 @@ import numpy as np
 class GAInfo:
     """This class stores information regarding evolutionary parameters."""
 
-    def __init__(self, generation=100, population=25, cross_chance=0.75,
-                 mut_chance=0.25, tourn_k=3, cross_meth='sdb',
-                 seed=np.random.random()):
+    def __init__(self, generation: int = 100, population: int = 25, cross_chance: float = 0.75,
+                 mut_chance: float = 0.25, tourn_k: int = 3, cross_meth: str = 'sdb',
+                 seed: float = np.random.random()):
         """Default constructor provides control over default EA parameters.
 
         See defaults inside of function header.

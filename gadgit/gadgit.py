@@ -299,7 +299,7 @@ def ga_multi(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_
     stats = tools.Statistics()
 
     _, _, hof = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
-                                ga_info.gen, stats, elite=None)
+                                ga_info.gen, stats, elite=tools.HallOfFame(1))
 
     return pop, stats, hof, extra_returns
 
@@ -370,13 +370,12 @@ def multi_eval(gene_info: GeneInfo, population: List[int], *args) -> tuple[ndarr
         append_ranks = rankdata(all_rows[:, i], method="dense")
         # Normalize
         sor[:, i] = append_ranks / append_ranks.max()
-        ...
     # Sum the ranks
     objective_sums = sor.sum(axis=1)
     return rankdata(objective_sums, method="dense"), obj_log_info
 
 
-def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbox, cxpb: float, mutpb: float,
+def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base], toolbox, cxpb: float, mutpb: float,
                     ngen: int, stats=None, elite=None, verbose=__debug__, **kwargs):
     """
     This function runs an EA using the Sum of Ranks (SoR) fitness methodology.
@@ -402,7 +401,7 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
         ## Single fitness value for the whole community (all genes in the community within one individual)
         population[index].fitness.values = fit_val,
 
-    elite = [population[fit_series.argmax()]]
+    elite.update(population)
     logbook.record(gen=0, nevals='maximal-temp', **obj_log_info)
     if verbose:
         print(logbook.stream)
@@ -425,14 +424,17 @@ def ea_sum_of_ranks(ga_info, gene_info: GeneInfo, population: list[base], toolbo
             offspring[index].fitness.values = fit_val,
 
         # Strict elitism
-        elite = [offspring[fit_series.argmax()] if offspring[fit_series.argmax()].fitness > elite[0].fitness else elite[0]]
-        population = tools.selBest(offspring, len(population) - 1) + [elite[0]]
+        # elite = [offspring[fit_series.argmax()] if offspring[fit_series.argmax()].fitness > elite[0].fitness else elite[0]]
 
-        # fit_series: pd.Series
-        # fit_series.
+        offspring.extend(elite.items)
+        elite.update(offspring)
+
+        # Why select the best again and not only update? Selection occurs at the beginning of the loop
+        population = tools.selBest(offspring, ga_info.pop)
+
         # Update frontier based on elite index
-        ## How many times the gene has been seen?
-        for index in tools.selBest(population, 1)[0]:
+        # How many times the gene has been seen in the elite community
+        for index in elite[0]:
             gene_info.frontier[index] += 1
 
         # ranks[gen] = {
