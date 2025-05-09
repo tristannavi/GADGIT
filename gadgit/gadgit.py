@@ -209,51 +209,6 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: 
 extra_returns = {}
 
 
-def multi(gene_info, population):
-    """Helper function to implement the SoR table operations."""
-    # Build raw objective information
-    all_rows = []
-    for indiv in population:
-        indiv_slice = gene_info.data_frame.loc[indiv]
-        indiv_sums = [indiv_slice[obj].sum() for obj in gene_info.obj_list]
-        all_rows.append(indiv_sums)
-    raw_frame = pd.DataFrame(all_rows, columns=gene_info.obj_list)
-
-    # Ranking procedure
-    sor = pd.DataFrame()
-    obj_log_info = {}
-    for obj in raw_frame.columns:
-        obj_log_info[f'new_gen_max_{obj}'] = raw_frame[obj].max()
-        obj_log_info[f'new_gen_mean_{obj}'] = raw_frame[obj].mean()
-        rank_series = np.argsort(raw_frame[obj])
-        # Flip index and argmax indices, create a series
-        swap_index = pd.Series(dict((v, k) for k, v in rank_series.items()))
-        # Sort by index (now argmax index)
-        append_ranks = swap_index.sort_index()
-        # Normalize
-        sor[obj + '_rank_norm'] = append_ranks / append_ranks.max()
-    # Sum the ranks
-    sor['sum'] = sor[list(sor.columns)].sum(axis=1)
-    # Rank the sums calculated previously
-    # temp: pd.DataFrame
-    # temp = sor['sum'].rank(method='first')
-
-    # rank_series2 = rank_series
-    # swap_index2 = swap_index
-    # append_ranks2 = append_ranks
-    # summation = sor[list(sor.columns)].sum(axis=1)
-    # first_ranking = sor['sum'].rank(method='first')
-    # append_ranks_max = append_ranks.max()
-    # append_ranks_min = append_ranks.min()
-    # single = [single_eval(gene_info, population[x]) for x in range(len(population))]
-    # single_min = np.array(single).flatten()[np.array(single).flatten().argmin()], np.array(
-    #     single).flatten().argmin()
-    # single_max = np.array(single).flatten()[np.array(single).flatten().argmax()], np.array(
-    #     single).flatten().argmax()
-
-    return sor['sum'].rank(method='first'), sor["sum"]
-
-
 def multi_eval(gene_info: GeneInfo, population: List[int], *args) -> tuple[ndarray, dict]:
     """Helper function to implement the SoR table operations."""
     # Build raw objective information
