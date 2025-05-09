@@ -200,8 +200,8 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: 
     # Empty, as SoR objects are special
     stats = tools.Statistics()
 
-    _, _, hof = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
-                                ga_info.gen, stats, elite=tools.HallOfFame(1))
+    _, _, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
+                                               ga_info.gen, stats, elite=[])
 
     return pop, stats, hof, extra_returns
 
@@ -258,7 +258,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         ## Single fitness value for the whole community (all genes in the community within one individual)
         population[index].fitness.values = fit_val,
 
-    elite.update(population)
+    elite = [population[fit_series.argmax()]]
     logbook.record(gen=0, nevals='maximal-temp', **obj_log_info)
     if verbose:
         print(logbook.stream)
@@ -281,10 +281,23 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
             offspring[index].fitness.values = fit_val,
 
         # Strict elitism
-        # elite = [offspring[fit_series.argmax()] if offspring[fit_series.argmax()].fitness > elite[0].fitness else elite[0]]
 
-        offspring.extend(elite.items)
-        elite.update(offspring)
+        offspring.append(elite[0])
+
+        # Update elite if a new individual either has a better fitness or the same fitness
+        elite = [offspring[fit_series.argmax()] if offspring[fit_series.argmax()].fitness >= elite[0].fitness else elite[0]]
+        # elite.update(offspring)
+
+        # if elite[0].fitness != offspring[fit_series.argmax()].fitness:
+        #     extra_returns.setdefault("elite_fitnesses", 0)
+        #     extra_returns["elite_fitnesses"] += 1
+        # else:
+        #     extra_returns.setdefault("elite_fitnesses_generation", [])
+        #     extra_returns["elite_fitnesses_generation"].append(gen)
+
+        # extra_returns.setdefault("elite", [None])
+        # if extra_returns["elite"][-1] != elite[0]:
+        #     extra_returns["elite"].append(elite[0])
 
         # Why select the best again and not only update? Selection occurs at the beginning of the loop
         population = tools.selBest(offspring, ga_info.pop)
