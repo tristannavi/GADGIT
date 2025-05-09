@@ -14,34 +14,6 @@ from scipy.stats import rankdata
 from gadgit import GeneInfo, GAInfo
 
 
-def single_eval(gene_info, individual):
-    """ Single objective summation of the centrality of a particular
-    frame's chosen column.
-
-    Due to gene_info.obj_list obviously accepting a list for the purposes of
-    extending to MOP, in the case of this single_eval, the head of the list
-    is treated as the 'single' objective.
-
-    Note: does not correctly calculate the frontier.
-
-    Largest sum is the best.
-    """
-
-    # assert len(individual) == gene_info.com_size, \
-    #     'Indiv does not match community size in eval'
-    # assert set(gene_info.fixed_list_ids).issubset(individual), \
-    #     'Indiv does not possess all fixed genes'
-
-    # FIXME Does this just sum the whole column?
-    fit_col = gene_info.obj_list[0]
-    fit_sum = 0.0
-    for item in individual:
-        fit_sum += gene_info.data_frame.loc[item, fit_col]
-        # gene_info.frontier[item] += 1
-
-    return fit_sum,
-
-
 def cx_SDB(gene_info, ind1, ind2):
     """SDB Crossover
 
@@ -177,80 +149,10 @@ def indiv_builder(gene_info):
     return base_indiv
 
 
-def ga(gene_info, ga_info, mapper=map):
-    if len(gene_info.obj_list) < 1:
-        raise ValueError("You must have at least one objective to run a GA.")
-    elif len(gene_info.obj_list) == 1:
-        return ga_single(gene_info, ga_info)
-    else:
-        return ga_multi(gene_info, ga_info, mapper)
-
-
-def ga_single(gene_info, ga_info):
-    """Main loop which sets DEAP objects and calls a single objective EA algorithm.
-
-    Parameters
-    -------
-    gene_info, GeneInfo class
-        See respective class documentation.
-    ga_info, GAInfo class
-        See respective class documentation.
-
-    Returns
-    -------
-    pop, DEAP object
-    stats, DEAP object
-    hof, DEAP object
-
-    See post_run function for examples of how to interpret results.
-    """
-
-    random.seed(ga_info.seed)
-
-    creator.create("Fitness", base.Fitness, weights=(1.0,))
-    creator.create("Individual", set, fitness=creator.Fitness)
-
-    toolbox = base.Toolbox()
-    toolbox.register("indices", indiv_builder, gene_info)
-    toolbox.register("individual", tools.initIterate, creator.Individual,
-                     toolbox.indices)
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register("evaluate", single_eval, gene_info)
-
-    if ga_info.cross_meth == 'ops':
-        toolbox.register("mate", cx_OPS, gene_info)
-    elif ga_info.cross_meth == 'sdb':
-        toolbox.register("mate", cx_SDB, gene_info)
-    elif ga_info.cross_meth == 'both':
-        toolbox.register("mate_ops", cx_OPS, gene_info)
-        toolbox.register("mate_sdb", cx_SDB, gene_info)
-    else:
-        raise AttributeError('Invalid crossover string specified')
-
-    toolbox.register("mutate", mut_flipper, gene_info)
-    toolbox.register("select", tools.selTournament, tournsize=ga_info.nk)
-
-    pop = toolbox.population(n=ga_info.pop)
-    hof = tools.HallOfFame(1)
-    stats = tools.Statistics(lambda ind: ind.fitness.values)
-    stats.register("avg", np.mean, axis=0)
-    stats.register("max", np.max, axis=0)
-
-    # FIXME does it matter if we use eaSimple or the multi-objective one?
-
-    algorithms.eaSimple(pop, toolbox, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
-                        stats, halloffame=hof)
-
-    # ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
-    #                 ga_info.gen, stats, halloffame=hof)
-
-    return pop, stats, hof
-
-
 debug = False
 
 
-def ga_multi(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: bool = False, **kwargs):
+def ga(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: bool = False, **kwargs):
     """Main loop which sets DEAP objects and calls a multi objective EA algorithm.
 
     Parameters
