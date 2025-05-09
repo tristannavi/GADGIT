@@ -6,6 +6,5 @@ __version__ = '0.7.1'
 
 from .GAInfo import GAInfo
 from .GeneInfo import GeneInfo
-from .gadgit import ga_single
-from .gadgit import ga_multi
+from .gadgit import ga
 from .GAOutput import GAOutput
