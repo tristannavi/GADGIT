@@ -3,11 +3,10 @@ from collections.abc import Callable
 from typing import List
 
 import numpy as np
-import pandas as pd
-from deap import base, algorithms
+from deap import base
 from deap import creator
 from deap import tools
-from deap.algorithms import varOr, varAnd
+from deap.algorithms import varAnd
 from numpy import ndarray
 from scipy.stats import rankdata
 
@@ -55,21 +54,33 @@ def cx_SDB(gene_info, ind1, ind2):
     return ind1, ind2
 
 
-def valid_add(gene_info, individual):
-    """Based on gene info and current individual, return a valid index to add
-    to an individual.
+def valid_add(gene_info: GeneInfo, individual: list) -> int:
+    """
+    Determines a valid addition to an individual's gene sequence from available genes.
+
+    This function calculates a random valid gene not currently present in the given
+    individual's gene sequence. The full range of gene indices is obtained from
+    the `gene_info` object. It excludes the indices already existing in the `individual`
+    sequence and randomly selects one from the remaining valid indices.
+
+    :param gene_info: An object that contains information about available genes,
+        including their total count in the `gene_count` attribute.
+    :param individual: A list containing the indices of genes that
+        are already part of the individual's gene sequence.
+    :return: A randomly selected valid gene index that can be added
+        to the individual's sequence.
     """
     return random.choice(list(set(range(0, gene_info.gene_count)) - set(individual)))
 
 
-def valid_remove(gene_info, individual: List):
+def valid_remove(gene_info: GeneInfo, individual: list) -> int:
     """Based on gene info, removed an index from an individual that respects
     fixed genes
     """
     return random.choice(sorted(tuple(set(individual) - set(gene_info.fixed_list_ids))))
 
 
-def self_correction(gene_info, individual: List):
+def self_correction(gene_info: GeneInfo, individual: list) -> list:
     """This function takes a potentially broken individual and returns a
     correct one.
 
@@ -77,7 +88,6 @@ def self_correction(gene_info, individual: List):
         Add all fixed genes
         while size isn't right; add or remove
     """
-
     individual.extend(gene_info.fixed_list_ids)
     individual_new = list(set(individual))
     individual.clear()
@@ -93,13 +103,13 @@ def self_correction(gene_info, individual: List):
 
     assert len(individual) == gene_info.com_size, \
         'Self correction failed to create indiv with proper size'
-    # assert set(gene_info.fixed_list_ids).issubset(individual), \
-    #     'Individual not possess all fixed genes after self correction'
+    assert set(gene_info.fixed_list_ids).issubset(individual), \
+        'Individual not possess all fixed genes after self correction'
 
     return individual
 
 
-def cx_OPS(gene_info: GeneInfo, ind1: List, ind2: List):
+def cx_OPS(gene_info: GeneInfo, ind1: list, ind2: list):
     """Standard one-point crossover implemented for set individuals.
 
     Self correction is handled by abstracted function.
@@ -107,17 +117,21 @@ def cx_OPS(gene_info: GeneInfo, ind1: List, ind2: List):
     Note that this function has no ability to make assertions on the
     individuals it generates.
     """
-    pivot = random.randint(0, len(ind1) - 1)
-    ind1_new = [ind1[i] for i in range(0, pivot)]  # First part of the individual
-    ind1_new.extend([ind2[i] for i in range(pivot, len(ind2))])  # Second part of the other individual
+    # pivot = random.randint(0, len(ind1) - 1)
+    # ind1_new = [ind1[i] for i in range(0, pivot)]  # First part of the individual
+    # ind1_new.extend([ind2[i] for i in range(pivot, len(ind2))])  # Second part of the other individual
+    #
+    # ind2_new = [ind2[i] for i in range(0, pivot)]
+    # ind2_new.extend([ind1[i] for i in range(pivot, len(ind1))])
+    #
+    # ind1.clear()  # Forcibly use proper individual class
+    # ind1.extend(ind1_new)
+    # ind2.clear()
+    # ind2.extend(ind2_new)
 
-    ind2_new = [ind2[i] for i in range(0, pivot)]
-    ind2_new.extend([ind1[i] for i in range(pivot, len(ind1))])
-
-    ind1.clear()  # Forcibly use proper individual class
-    ind1.extend(ind1_new)
-    ind2.clear()
-    ind2.extend(ind2_new)
+    size = min(len(ind1), len(ind2))
+    cxpoint = random.randint(1, size - 1)
+    ind1[cxpoint:], ind2[cxpoint:] = ind2[cxpoint:], ind1[cxpoint:]
 
     return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
 
@@ -147,9 +161,6 @@ def indiv_builder(gene_info):
     base_indiv = random.sample(valid_choices, num_choices)
     base_indiv.extend(gene_info.fixed_list_ids)
     return base_indiv
-
-
-debug = False
 
 
 def ga(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: bool = False, **kwargs):
@@ -199,6 +210,7 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: 
     pop = toolbox.population(n=ga_info.pop)
     # Empty, as SoR objects are special
     stats = tools.Statistics()
+    extra_returns = None
 
     _, _, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
                                                ga_info.gen, stats, elite=[])
@@ -206,10 +218,7 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: 
     return pop, stats, hof, extra_returns
 
 
-extra_returns = {}
-
-
-def multi_eval(gene_info: GeneInfo, population: List[int], *args) -> tuple[ndarray, dict]:
+def multi_eval(gene_info: GeneInfo, population: list[list[int]], *args) -> tuple[ndarray, dict]:
     """Helper function to implement the SoR table operations."""
     # Build raw objective information
     all_rows = np.zeros(shape=(len(population), len(gene_info.obj_list)))
@@ -241,6 +250,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
     It is not meant to be exposed to users, and instead is only used
     internally by the package.
     """
+
+    extra_returns: dict = {}
 
     logbook = tools.Logbook()
     logbook.header = ['gen', 'nevals']
@@ -322,4 +333,4 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         if verbose:
             print(logbook.stream)
 
-    return population, logbook, elite
+    return population, logbook, elite, extra_returns

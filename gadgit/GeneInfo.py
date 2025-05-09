@@ -34,7 +34,10 @@ class GeneInfo:
             fixed_list = []
 
         self.frame_path = frame_path
-        self.data_frame = pd.read_csv(frame_path)
+        if isinstance(frame_path, DataFrame):
+            self.data_frame = frame_path
+        else:
+            self.data_frame = pd.read_csv(frame_path)
         self.data_numpy = self.data_frame[obj_list].to_numpy()
 
         if 'GeneName' not in self.data_frame.columns:
