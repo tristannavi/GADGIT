@@ -1,11 +1,15 @@
+from typing import List
+
 import pandas as pd
+from pandas import DataFrame
 
 
 class GeneInfo:
     """This class stores information regarding a specific problem's
     biological parameters."""
 
-    def __init__(self, frame_path, obj_list, com_size=100, fixed_list=None):
+    def __init__(self, frame_path: str | DataFrame, obj_list: List[str], com_size: int = 100,
+                 fixed_list: List[str] = None):
         """Default constructor provides control over default EA parameters.
 
         Defaults are defined above in the function header.
