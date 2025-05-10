@@ -1,6 +1,5 @@
 import random
 from collections.abc import Callable
-from typing import List
 
 import numpy as np
 from deap import base
@@ -278,9 +277,10 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
     for gen in range(1, ngen + 1):
         # Select the next generation individuals to breed
         # TODO: select pop-1 and add elite
-        breed_pop = toolbox.select(population, len(population))
+        breed_pop = toolbox.select(population, len(population) - 1)
 
         offspring = varAnd(breed_pop, toolbox, cxpb, mutpb)
+        offspring.extend(elite)
 
         # TODO maybe no mutation on elite or at least ensure elite is there for fitness calc
 
@@ -293,10 +293,11 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
 
         # Strict elitism
 
-        offspring.append(elite[0])
+        # offspring.append(elite[0])
 
         # Update elite if a new individual either has a better fitness or the same fitness
-        elite = [offspring[fit_series.argmax()] if offspring[fit_series.argmax()].fitness >= elite[0].fitness else elite[0]]
+        elite = [
+            offspring[fit_series.argmax()] if offspring[fit_series.argmax()].fitness >= elite[0].fitness else elite[0]]
         # elite.update(offspring)
 
         # if elite[0].fitness != offspring[fit_series.argmax()].fitness:
@@ -311,7 +312,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         #     extra_returns["elite"].append(elite[0])
 
         # Why select the best again and not only update? Selection occurs at the beginning of the loop
-        population = tools.selBest(offspring, ga_info.pop)
+        population = offspring[:]
 
         # Update frontier based on elite index
         # How many times the gene has been seen in the elite community
