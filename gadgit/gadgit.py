@@ -128,8 +128,7 @@ def cx_OPS(gene_info: GeneInfo, ind1: list, ind2: list):
     # ind2.clear()
     # ind2.extend(ind2_new)
 
-    size = min(len(ind1), len(ind2))
-    cxpoint = random.randint(1, size - 1)
+    cxpoint = random.randint(1, gene_info.com_size - 1)
     ind1[cxpoint:], ind2[cxpoint:] = ind2[cxpoint:], ind1[cxpoint:]
 
     return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
