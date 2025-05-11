@@ -1,5 +1,6 @@
 import random
 from collections.abc import Callable
+from copy import deepcopy
 
 import numpy as np
 from deap import base
@@ -267,7 +268,9 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         ## Single fitness value for the whole community (all genes in the community within one individual)
         population[index].fitness.values = fit_val,
 
-    elite = [population[fit_series.argmax()]]
+    elite = [deepcopy(population[fit_series.argmax()])]
+    extra_returns.setdefault("elite_changed_temp", [])
+    extra_returns["elite_changed_temp"].append(elite[0].fitness.values[0])
     logbook.record(gen=0, nevals='maximal-temp', **obj_log_info)
     if verbose:
         print(logbook.stream)
@@ -279,7 +282,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         breed_pop = toolbox.select(population, len(population) - 1)
 
         offspring = varAnd(breed_pop, toolbox, cxpb, mutpb)
-        offspring.extend(elite)
+        offspring.append(deepcopy(elite[0]))
 
         # TODO maybe no mutation on elite or at least ensure elite is there for fitness calc
 
@@ -295,8 +298,11 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         # offspring.append(elite[0])
 
         # Update elite if a new individual either has a better fitness or the same fitness
+        # Need to copy not reference!!
         elite = [
-            offspring[fit_series.argmax()] if offspring[fit_series.argmax()].fitness >= elite[0].fitness else elite[0]]
+            deepcopy(offspring[fit_series.argmax()]) if offspring[fit_series.argmax()].fitness.values[0] >= elite[0].fitness.values[0] else elite[0]]
+        extra_returns.setdefault("elite_changed_temp", [])
+        extra_returns["elite_changed_temp"].append(elite[0].fitness.values[0])
         # elite.update(offspring)
 
         # if elite[0].fitness != offspring[fit_series.argmax()].fitness:
@@ -333,4 +339,11 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         if verbose:
             print(logbook.stream)
 
+    # Check if elite ever happens to get smaller than a previous elite
+    extra_returns.setdefault("elite_changed", False)
+    for x in range(1, len(extra_returns["elite_changed_temp"])):
+        if extra_returns["elite_changed_temp"][x] < extra_returns["elite_changed_temp"][x-1]:
+            extra_returns["elite_changed"] = True
+            break
+    del extra_returns["elite_changed_temp"]
     return population, logbook, elite, extra_returns
