@@ -269,8 +269,11 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         population[index].fitness.values = fit_val,
 
     elite = [deepcopy(population[fit_series.argmax()])]
-    extra_returns.setdefault("elite_changed_temp", [])
-    extra_returns["elite_changed_temp"].append(elite[0].fitness.values[0])
+    # extra_returns.setdefault("elite_changed_temp", [])
+    # extra_returns.setdefault("elite", [])
+    # extra_returns["elite"].append(elite[0])
+    #
+    # extra_returns["elite_changed_temp"].append(elite[0].fitness.values[0])
     logbook.record(gen=0, nevals='maximal-temp', **obj_log_info)
     if verbose:
         print(logbook.stream)
@@ -300,9 +303,11 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
         elite = [
-            deepcopy(offspring[fit_series.argmax()]) if offspring[fit_series.argmax()].fitness.values[0] >= elite[0].fitness.values[0] else elite[0]]
-        extra_returns.setdefault("elite_changed_temp", [])
-        extra_returns["elite_changed_temp"].append(elite[0].fitness.values[0])
+            deepcopy(offspring[fit_series.argmax()]) if offspring[fit_series.argmax()].fitness.values[0] >= fit_series[offspring.index(elite[0])] else elite[0]]
+        # extra_returns.setdefault("elite_changed_temp", [])
+        # extra_returns.setdefault("elite", [])
+        # extra_returns["elite_changed_temp"].append(offspring[fit_series.argmax()].fitness.values[0])
+        # extra_returns["elite"].append(elite[0])
         # elite.update(offspring)
 
         # if elite[0].fitness != offspring[fit_series.argmax()].fitness:
@@ -340,10 +345,10 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
             print(logbook.stream)
 
     # Check if elite ever happens to get smaller than a previous elite
-    extra_returns.setdefault("elite_changed", False)
-    for x in range(1, len(extra_returns["elite_changed_temp"])):
-        if extra_returns["elite_changed_temp"][x] < extra_returns["elite_changed_temp"][x-1]:
-            extra_returns["elite_changed"] = True
-            break
-    del extra_returns["elite_changed_temp"]
+    # extra_returns.setdefault("elite_changed", False)
+    # for x in range(1, len(extra_returns["elite_changed_temp"])):
+    #     if extra_returns["elite_changed_temp"][x] < extra_returns["elite_changed_temp"][x-1]:
+    #         extra_returns["elite_changed"] = True
+    #         break
+    # del extra_returns["elite_changed_temp"]
     return population, logbook, elite, extra_returns
