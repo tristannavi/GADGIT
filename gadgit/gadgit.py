@@ -7,10 +7,9 @@ from deap import base
 from deap import creator
 from deap import tools
 from deap.algorithms import varAnd
+from gadgit import GeneInfo, GAInfo
 from numpy import ndarray
 from scipy.stats import rankdata
-
-from gadgit import GeneInfo, GAInfo
 
 
 def cx_SDB(gene_info, ind1, ind2):
@@ -183,7 +182,7 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: 
 
     random.seed(ga_info.seed)
 
-    creator.create("Fitness", base.Fitness, weights=(1.0,))
+    creator.create("Fitness", base.Fitness, weights=(-1.0,))
     creator.create("Individual", list, fitness=creator.Fitness)
 
     toolbox = base.Toolbox()
@@ -237,7 +236,7 @@ def multi_eval(gene_info: GeneInfo, population: list[list[int]], *args) -> tuple
         sor[:, i] = append_ranks / append_ranks.max()
     # Sum the ranks
     objective_sums = sor.sum(axis=1)
-    return rankdata(objective_sums, method="dense"), obj_log_info
+    return 10 - rankdata(objective_sums, method="dense"), obj_log_info
 
 
 def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base], toolbox, cxpb: float, mutpb: float,
@@ -268,7 +267,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         ## Single fitness value for the whole community (all genes in the community within one individual)
         population[index].fitness.values = fit_val,
 
-    elite = [deepcopy(population[fit_series.argmax()])]
+    # elite = [deepcopy(population[fit_series.argmax()])]
+    elite = [deepcopy(population[fit_series.argmin()])]
     # extra_returns.setdefault("elite_changed_temp", [])
     # extra_returns.setdefault("elite", [])
     # extra_returns["elite"].append(elite[0])
@@ -303,7 +303,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
         elite = [
-            deepcopy(offspring[fit_series.argmax()]) if offspring[fit_series.argmax()].fitness.values[0] >= fit_series[offspring.index(elite[0])] else elite[0]]
+            # deepcopy(offspring[fit_series.argmax()]) if offspring[fit_series.argmax()].fitness.values[0] >= fit_series[offspring.index(elite[0])] else elite[0]]
+            deepcopy(offspring[fit_series.argmin()])]
         # extra_returns.setdefault("elite_changed_temp", [])
         # extra_returns.setdefault("elite", [])
         # extra_returns["elite_changed_temp"].append(offspring[fit_series.argmax()].fitness.values[0])
