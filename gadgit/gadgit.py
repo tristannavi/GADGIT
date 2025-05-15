@@ -282,6 +282,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
     for gen in range(1, ngen + 1):
         # Select the next generation individuals to breed
         # TODO: select pop-1 and add elite
+        population.append(deepcopy(elite[0]))
         breed_pop = toolbox.select(population, len(population) - 1)
 
         offspring = varAnd(breed_pop, toolbox, cxpb, mutpb)
@@ -296,6 +297,10 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         for index, fit_val in enumerate(fit_series):
             offspring[index].fitness.values = fit_val,
 
+        def string(list_of_ints):
+            return ','.join(str(i) for i in list_of_ints)
+
+
         # Strict elitism
 
         # offspring.append(elite[0])
@@ -307,9 +312,9 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
             # deepcopy(offspring[fit_series.argmin()]) if offspring[fit_series.argmin()].fitness.values[0] <= fit_series[offspring.index(elite[0])] else elite[0]]
             deepcopy(offspring[fit_series.argmin()])]
         # extra_returns.setdefault("elite_changed_temp", [])
-        # extra_returns.setdefault("elite", [])
+        extra_returns.setdefault("elite", [])
         # extra_returns["elite_changed_temp"].append(offspring[fit_series.argmax()].fitness.values[0])
-        # extra_returns["elite"].append(elite[0])
+        extra_returns["elite"].append(list(elite[0]))
         # elite.update(offspring)
 
         # if elite[0].fitness != offspring[fit_series.argmax()].fitness:
