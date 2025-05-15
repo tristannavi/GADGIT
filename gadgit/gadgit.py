@@ -304,8 +304,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
         # Need to copy not reference!!
         elite = [
             # deepcopy(offspring[fit_series.argmax()]) if offspring[fit_series.argmax()].fitness.values[0] >= fit_series[offspring.index(elite[0])] else elite[0]]
-            deepcopy(offspring[fit_series.argmin()]) if offspring[fit_series.argmin()].fitness.values[0] <= fit_series[offspring.index(elite[0])] else elite[0]]
-            # deepcopy(offspring[fit_series.argmin()])]
+            # deepcopy(offspring[fit_series.argmin()]) if offspring[fit_series.argmin()].fitness.values[0] <= fit_series[offspring.index(elite[0])] else elite[0]]
+            deepcopy(offspring[fit_series.argmin()])]
         # extra_returns.setdefault("elite_changed_temp", [])
         # extra_returns.setdefault("elite", [])
         # extra_returns["elite_changed_temp"].append(offspring[fit_series.argmax()].fitness.values[0])
