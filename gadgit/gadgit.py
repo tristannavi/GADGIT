@@ -1,4 +1,4 @@
-import random
+import random as rand
 from collections.abc import Callable
 from copy import deepcopy
 
@@ -7,12 +7,16 @@ from deap import base
 from deap import creator
 from deap import tools
 from deap.algorithms import varAnd
-from gadgit import GeneInfo, GAInfo
 from numpy import ndarray
 from scipy.stats import rankdata
 
+from gadgit import GeneInfo, GAInfo
+
 
 def cx_SDB(gene_info, ind1, ind2):
+random: rand.Random
+
+
     """SDB Crossover
 
     Computes the intersection and asserts that after the intersection,
@@ -31,18 +35,20 @@ def cx_SDB(gene_info, ind1, ind2):
     """
 
     # Build dealer
-    intersect = ind1.intersection(ind2)
-    dealer = list(ind1.union(ind2) - intersect)
+    s1 = set(ind1)
+    s2 = set(ind2)
+    intersect = s1.intersection(s2)
+    dealer = list(s1.union(s2) - intersect)
     random.shuffle(dealer)
     assert len(dealer) % 2 == 0, 'Dealer assumption on indiv crossover failure'
 
     # Rebuild individuals and play out dealer
     ind1.clear()
     ind2.clear()
-    ind1.update(dealer[:len(dealer) // 2])
-    ind1.update(intersect)
-    ind2.update(dealer[len(dealer) // 2:])
-    ind2.update(intersect)
+    ind1.extend(dealer[:len(dealer) // 2])
+    ind1.extend(intersect)
+    ind2.extend(dealer[len(dealer) // 2:])
+    ind2.extend(intersect)
     assert (len(ind1) == gene_info.com_size and
             len(ind2) == gene_info.com_size), 'SDB created invalid individual'
     assert set(gene_info.fixed_list_ids).issubset(ind1), \
@@ -154,8 +160,7 @@ def mut_flipper(gene_info, individual):
 def indiv_builder(gene_info):
     """Implementation of forcing fixed genes in creation of new individual."""
     num_choices = gene_info.com_size - len(gene_info.fixed_list)
-    valid_choices = list(set(range(gene_info.gene_count))
-                         - set(gene_info.fixed_list_ids))
+    valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_ids))
     base_indiv = random.sample(valid_choices, num_choices)
     base_indiv.extend(gene_info.fixed_list_ids)
     return base_indiv
@@ -180,7 +185,9 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: 
     See post_run function for examples of how to interpret results.
     """
 
-    random.seed(ga_info.seed)
+    # random.seed(ga_info.seed)
+    global random
+    random = rand.Random(ga_info.seed)
 
     creator.create("Fitness", base.Fitness, weights=(-1.0,))
     creator.create("Individual", list, fitness=creator.Fitness)
@@ -299,7 +306,6 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
 
         def string(list_of_ints):
             return ','.join(str(i) for i in list_of_ints)
-
 
         # Strict elitism
 
