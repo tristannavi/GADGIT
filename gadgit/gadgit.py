@@ -1,4 +1,4 @@
-import random as rand
+import random
 from collections.abc import Callable
 from copy import deepcopy
 
@@ -13,8 +13,6 @@ from scipy.stats import rankdata
 from gadgit import GeneInfo, GAInfo
 
 
-def cx_SDB(gene_info, ind1, ind2):
-random: rand.Random
 
 
     """SDB Crossover
@@ -186,8 +184,7 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: 
     """
 
     # random.seed(ga_info.seed)
-    global random
-    random = rand.Random(ga_info.seed)
+    random.seed(ga_info.seed)
 
     creator.create("Fitness", base.Fitness, weights=(-1.0,))
     creator.create("Individual", list, fitness=creator.Fitness)
