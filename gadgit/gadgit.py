@@ -12,11 +12,11 @@ from scipy.stats import rankdata
 
 from gadgit import GeneInfo, GAInfo
 
-type pop = list[list]
-type indiv = list
+# type pop = list[list]
+# type indiv = list
 
 
-def cx_SDB(gene_info: GeneInfo, ind1: indiv, ind2: indiv) -> tuple[indiv, indiv]:
+def cx_SDB(gene_info: GeneInfo, ind1, ind2):
     """SDB Crossover
 
     Computes the intersection and asserts that after the intersection,
