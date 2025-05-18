@@ -1,12 +1,15 @@
+import random
+
 import numpy as np
+from numpy.random import MT19937, Generator, PCG64DXSM
+from numpy.random import RandomState, SeedSequence
 
 
 class GAInfo:
     """This class stores information regarding evolutionary parameters."""
 
     def __init__(self, generation: int = 100, population: int = 25, cross_chance: float = 0.75,
-                 mut_chance: float = 0.25, tourn_k: int = 3, cross_meth: str = 'sdb',
-                 seed: float = np.random.random()):
+                 mut_chance: float = 0.25, tourn_k: int = 3, cross_meth: str = 'sdb'):
         """Default constructor provides control over default EA parameters.
 
         See defaults inside of function header.
@@ -37,7 +40,7 @@ class GAInfo:
         self.mutpb = mut_chance
         self.nk = tourn_k
         self.cross_meth = cross_meth
-        self.seed = seed
+
 
     def __str__(self) -> str:
         """Return params as string."""
@@ -49,5 +52,5 @@ class GAInfo:
             f"\tMutation: {self.mutpb}\n"
             f"\tTournament: {self.nk}\n"
             f"\tCross Method: {self.cross_meth}\n"
-            f"\tSeed: {self.seed}"
+            # f"\tSeed: {self.seed}"
         )

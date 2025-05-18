@@ -1,15 +1,16 @@
 from typing import List
 
+import numpy as np
 import pandas as pd
+from numpy.random import SeedSequence, PCG64DXSM
 from pandas import DataFrame
 
 
 class GeneInfo:
-    """This class stores information regarding a specific problem's
-    biological parameters."""
+    """This class stores information regarding a specific problem's biological parameters."""
 
     def __init__(self, frame_path: str | DataFrame, obj_list: List[str], com_size: int = 100,
-                 fixed_list: List[str] = None):
+                 fixed_list: List[str] = None, seed: int = SeedSequence().entropy):
         """Default constructor provides control over default EA parameters.
 
         Defaults are defined above in the function header.
@@ -56,7 +57,9 @@ class GeneInfo:
         # self.fixed_list_ids = [x for x in range(len(self.fixed_list))]
 
         self.com_size = com_size
-        self.frontier = [0 for x in range(self.gene_count)]
+        self.frontier = np.zeros(shape=self.gene_count)#[0 for x in range(self.gene_count)]
+        self.seed = seed
+        self.rand = np.random.default_rng(PCG64DXSM(seed))
 
     def __str__(self):
         """Return all parameters as a formatted string."""

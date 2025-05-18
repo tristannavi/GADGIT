@@ -1,22 +1,13 @@
-import random
 from collections.abc import Callable
 from copy import deepcopy
+import numba
 
 import numpy as np
-from deap import base
-from deap import creator
-from deap import tools
-from deap.algorithms import varAnd
-from numpy import ndarray
-from scipy.stats import rankdata
 
 from gadgit import GeneInfo, GAInfo
 
-# type pop = list[list]
-# type indiv = list
 
-
-def cx_SDB(gene_info: GeneInfo, ind1, ind2):
+def cx_SDB(gene_info: GeneInfo, ind1: np.ndarray, ind2: np.ndarray):
     """SDB Crossover
 
     Computes the intersection and asserts that after the intersection,
@@ -35,31 +26,25 @@ def cx_SDB(gene_info: GeneInfo, ind1, ind2):
     """
 
     # Build dealer
-    s1 = set(ind1)
-    s2 = set(ind2)
-    intersect = s1.intersection(s2)
-    dealer = list(s1.union(s2) - intersect)
-    random.shuffle(dealer)
-    assert len(dealer) % 2 == 0, 'Dealer assumption on indiv crossover failure'
+    intersect = np.intersect1d(ind1, ind2, assume_unique=True)
+    dealer = np.setdiff1d(np.union1d(ind1, ind2), intersect, assume_unique=True)
+    gene_info.rand.shuffle(dealer)
 
-    # Rebuild individuals and play out dealer
-    ind1.clear()
-    ind2.clear()
-    ind1.extend(dealer[:len(dealer) // 2])
-    ind1.extend(intersect)
-    ind2.extend(dealer[len(dealer) // 2:])
-    ind2.extend(intersect)
-    assert (len(ind1) == gene_info.com_size and
-            len(ind2) == gene_info.com_size), 'SDB created invalid individual'
-    assert set(gene_info.fixed_list_ids).issubset(ind1), \
-        'Ind1 does not possess all fixed genes after crossover'
-    assert set(gene_info.fixed_list_ids).issubset(ind2), \
-        'Ind2 does not possess all fixed genes after crossover'
+    ind1[:len(dealer) // 2] = dealer[:len(dealer) // 2]
+    ind1[len(dealer) // 2:] = intersect
+    ind2[:len(dealer) // 2] = dealer[len(dealer) // 2:]
+    ind2[len(dealer) // 2:] = intersect
+    # assert (len(ind1) == gene_info.com_size and
+    #         len(ind2) == gene_info.com_size), 'SDB created invalid individual'
+    # assert set(gene_info.fixed_list_ids).issubset(ind1), \
+    #     'Ind1 does not possess all fixed genes after crossover'
+    # assert set(gene_info.fixed_list_ids).issubset(ind2), \
+    #     'Ind2 does not possess all fixed genes after crossover'
 
     return ind1, ind2
 
 
-def valid_add(gene_info: GeneInfo, individual: list) -> int:
+def valid_add(gene_info: GeneInfo, individual: np.ndarray) -> int:
     """
     Determines a valid addition to an individual's gene sequence from available genes.
 
@@ -75,17 +60,17 @@ def valid_add(gene_info: GeneInfo, individual: list) -> int:
     :return: A randomly selected valid gene index that can be added
         to the individual's sequence.
     """
-    return random.choice(list(set(range(0, gene_info.gene_count)) - set(individual)))
+    return gene_info.rand.choice(np.setdiff1d(np.arange(gene_info.gene_count), individual, assume_unique=True))
 
 
-def valid_remove(gene_info: GeneInfo, individual: list) -> int:
+def valid_remove(gene_info: GeneInfo, individual: np.ndarray) -> int:
     """Based on gene info, removed an index from an individual that respects
     fixed genes
     """
-    return random.choice(sorted(tuple(set(individual) - set(gene_info.fixed_list_ids))))
+    return gene_info.rand.choice(np.nonzero(np.invert(np.isin(individual, gene_info.fixed_list_ids)))[0])
 
 
-def self_correction(gene_info: GeneInfo, individual: list) -> list:
+def self_correction(gene_info: GeneInfo, individual: np.ndarray) -> np.ndarray:
     """This function takes a potentially broken individual and returns a
     correct one.
 
@@ -93,28 +78,26 @@ def self_correction(gene_info: GeneInfo, individual: list) -> list:
         Add all fixed genes
         while size isn't right; add or remove
     """
-    individual.extend(gene_info.fixed_list_ids)
-    individual_new = list(set(individual))
-    individual.clear()
-    individual.extend(individual_new)
-    while True:
-        indiv_size = len(individual)
-        if indiv_size < gene_info.com_size:
-            individual.append(valid_add(gene_info, individual))
-        elif indiv_size > gene_info.com_size:
-            individual.remove(valid_remove(gene_info, individual))
-        else:  # Must be equal
-            break
+    individual = np.unique(np.append(individual, gene_info.fixed_list_ids))
+    if gene_info.gene_count - len(individual) > 0:
+        temp = np.zeros(shape=(gene_info.gene_count - len(individual)))
+        for x in range(len(temp)):
+            temp[x] = valid_add(gene_info, individual)
+        return np.append(individual, temp)
+    elif gene_info.gene_count - len(individual) < 0:
+        for _ in range(abs(gene_info.gene_count - len(individual))):
+            individual[valid_remove(gene_info, individual)] = -1
+        return np.delete(individual, np.where(individual == -1))
 
-    assert len(individual) == gene_info.com_size, \
-        'Self correction failed to create indiv with proper size'
-    assert set(gene_info.fixed_list_ids).issubset(individual), \
-        'Individual not possess all fixed genes after self correction'
+    # assert len(individual) == gene_info.com_size, \
+    #     'Self correction failed to create indiv with proper size'
+    # assert set(gene_info.fixed_list_ids).issubset(individual), \
+    #     'Individual not possess all fixed genes after self correction'
 
     return individual
 
 
-def cx_OPS(gene_info: GeneInfo, ind1: list, ind2: list):
+def cx_OPS(gene_info: GeneInfo, ind1: np.ndarray, ind2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Standard one-point crossover implemented for set individuals.
 
     Self correction is handled by abstracted function.
@@ -122,48 +105,62 @@ def cx_OPS(gene_info: GeneInfo, ind1: list, ind2: list):
     Note that this function has no ability to make assertions on the
     individuals it generates.
     """
-    # pivot = random.randint(0, len(ind1) - 1)
-    # ind1_new = [ind1[i] for i in range(0, pivot)]  # First part of the individual
-    # ind1_new.extend([ind2[i] for i in range(pivot, len(ind2))])  # Second part of the other individual
-    #
-    # ind2_new = [ind2[i] for i in range(0, pivot)]
-    # ind2_new.extend([ind1[i] for i in range(pivot, len(ind1))])
-    #
-    # ind1.clear()  # Forcibly use proper individual class
-    # ind1.extend(ind1_new)
-    # ind2.clear()
-    # ind2.extend(ind2_new)
 
-    cxpoint = random.randint(1, gene_info.com_size - 1)
+    cxpoint = gene_info.rand.randint(1, gene_info.com_size - 1)
     ind1[cxpoint:], ind2[cxpoint:] = ind2[cxpoint:], ind1[cxpoint:]
 
     return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
 
 
-def mut_flipper(gene_info, individual):
+def mut_flipper(gene_info: GeneInfo, individual: np.ndarray) -> np.ndarray:
     """Flip based mutation. Flip one off to on, and one on to off.
 
     Must not allow the choice of a fixed gene to be turned off.
     """
-    assert len(individual) == gene_info.com_size, \
-        'Mutation received invalid indiv'
-    individual.remove(valid_remove(gene_info, individual))
-    individual.append(valid_add(gene_info, individual))
-    assert len(individual) == gene_info.com_size, \
-        'Mutation created an invalid indiv'
-    assert set(gene_info.fixed_list_ids).issubset(individual), \
-        ('Individual does not possess all fixed genes after mutation')
+    # assert len(individual) == gene_info.com_size, \
+    #     'Mutation received invalid indiv'
+    remove = valid_remove(gene_info, individual)
+    individual[remove] = valid_add(gene_info, individual)
+    # assert len(individual) == gene_info.com_size, \
+    #     'Mutation created an invalid indiv'
+    # assert set(gene_info.fixed_list_ids).issubset(individual), \
+    #     ('Individual does not possess all fixed genes after mutation')
 
-    return individual,
+    return individual
 
 
-def indiv_builder(gene_info):
+def indiv_builder(gene_info: GeneInfo) -> np.ndarray:
     """Implementation of forcing fixed genes in creation of new individual."""
     num_choices = gene_info.com_size - len(gene_info.fixed_list)
     valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_ids))
-    base_indiv = random.sample(valid_choices, num_choices)
-    base_indiv.extend(gene_info.fixed_list_ids)
+    base_indiv = np.pad(gene_info.fixed_list_ids, (0, num_choices), 'constant')
+    base_indiv[len(gene_info.fixed_list_ids):] = gene_info.rand.choice(valid_choices, num_choices, replace=False)
     return base_indiv
+
+
+def tournament_selection(gene_info: GeneInfo, individuals: np.ndarray, k: int, tournsize: int,
+                         fitneses: np.ndarray, max: bool = False) -> np.ndarray:
+    """Select the best individual among *tournsize* randomly chosen
+    individuals, *k* times. The list returned contains
+    references to the input *individuals*.
+
+    :param individuals: A list of individuals to select from.
+    :param k: The number of individuals to select.
+    :param tournsize: The number of individuals participating in each tournament.
+    :param fit_attr: The attribute of individuals to use as selection criterion
+    :returns: A list of selected individuals.
+
+    This function uses the :func:`~random.choice` function from the python base
+    :mod:`random` module.
+    """
+    chosen = np.zeros_like(individuals)
+    for i in range(k):
+        aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=False)
+        if max:
+            chosen[i] = individuals[aspirants][fitneses[aspirants].argmax()]
+        else:
+            chosen[i] = individuals[aspirants][fitneses[aspirants].argmin()]
+    return chosen
 
 
 def ga(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: bool = False, **kwargs):
@@ -185,68 +182,84 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: 
     See post_run function for examples of how to interpret results.
     """
 
-    # random.seed(ga_info.seed)
-    random.seed(ga_info.seed)
-
-    creator.create("Fitness", base.Fitness, weights=(-1.0,))
-    creator.create("Individual", list, fitness=creator.Fitness)
-
-    toolbox = base.Toolbox()
-    toolbox.register("indices", indiv_builder, gene_info)
-    toolbox.register("individual", tools.initIterate, creator.Individual,
-                     toolbox.indices)
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-    toolbox.register("map", mapper)
-
     if ga_info.cross_meth == 'ops':
-        toolbox.register("mate", cx_OPS, gene_info)
+        cross_meth = cx_OPS
     elif ga_info.cross_meth == 'sdb':
-        toolbox.register("mate", cx_SDB, gene_info)
-    elif ga_info.cross_meth == 'both':
-        toolbox.register("mate_ops", cx_OPS, gene_info)
-        toolbox.register("mate_sdb", cx_SDB, gene_info)
+        cross_meth = cx_SDB
+    # elif ga_info.cross_meth == 'both':
     else:
         raise AttributeError('Invalid crossover string specified')
 
-    toolbox.register("mutate", mut_flipper, gene_info)
-    toolbox.register("select", tools.selTournament, tournsize=ga_info.nk)
+    pop = np.array([indiv_builder(gene_info) for _ in range(ga_info.pop)])
 
-    pop = toolbox.population(n=ga_info.pop)
-    # Empty, as SoR objects are special
-    stats = tools.Statistics()
-    extra_returns = None
+    _, _, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb,
+                                               ga_info.gen, cross_meth, elite=[])
 
-    _, _, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, toolbox, ga_info.cxpb, ga_info.mutpb,
-                                               ga_info.gen, stats, elite=[])
-
-    return pop, stats, hof, extra_returns
+    return pop, {}, hof, extra_returns
 
 
-def multi_eval(gene_info: GeneInfo, population: list[list[int]], *args) -> tuple[ndarray, dict]:
-    """Helper function to implement the SoR table operations."""
-    # Build raw objective information
-    all_rows = np.zeros(shape=(len(population), len(gene_info.obj_list)))
-    for index, indiv in enumerate(population):
-        indiv_slice = gene_info.data_numpy[indiv]
-        indiv_sums = indiv_slice.sum(axis=0)
-        all_rows[index] = indiv_sums
-
-    # Ranking procedure
-    sor = np.zeros(shape=(len(population), len(gene_info.obj_list)))
-    obj_log_info = {}
-    for i, obj in enumerate(gene_info.obj_list):
-        obj_log_info[f'new_gen_max_{obj}'] = all_rows[:, i].max()
-        obj_log_info[f'new_gen_mean_{obj}'] = all_rows[:, i].mean()
-        append_ranks = rankdata(all_rows[:, i], method="dense")
-        # Normalize
-        sor[:, i] = append_ranks / append_ranks.max()
-    # Sum the ranks
-    objective_sums = sor.sum(axis=1)
-    return len(population) - rankdata(objective_sums, method="dense"), obj_log_info
+@numba.njit
+def _dense_rank(a: np.ndarray) -> np.ndarray:
+    # returns 1-based dense ranks of 1D array a
+    unique = np.unique(a)
+    ranks = np.empty(a.shape, np.int64)
+    for i in range(a.size):
+        # linear search over unique (ok for moderate sizes)
+        ai = a[i]
+        for j in range(unique.size):
+            if ai == unique[j]:
+                ranks[i] = j + 1
+                break
+    return ranks
 
 
-def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base], toolbox, cxpb: float, mutpb: float,
-                    ngen: int, stats=None, elite=None, verbose=__debug__, **kwargs):
+@numba.njit
+def multi_eval_nb(data: np.ndarray,
+                  population: np.ndarray
+                  ) -> np.ndarray:
+    pop_size, genome_len = population.shape
+    num_objs = data.shape[1]
+
+    all_rows = np.zeros((pop_size, num_objs))
+    # build raw sums
+    for i in range(pop_size):
+        for g in range(genome_len):
+            idx = population[i, g]
+            for o in range(num_objs):
+                all_rows[i, o] += data[idx, o]
+
+    # prepare output array
+    sor = np.zeros_like(all_rows)
+    for o in range(num_objs):
+        ranks = _dense_rank(all_rows[:, o])
+        max_r = ranks.max()
+        for i in range(pop_size):
+            sor[i, o] = ranks[i] / max_r
+
+    # sum over objectives and final rank
+    obj_sums = np.sum(sor, axis=1)
+    final_ranks = _dense_rank(obj_sums)
+
+    return len(population) - final_ranks
+
+
+def varAnd(offspring: np.ndarray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable):
+    # Apply crossover and mutation on the offspring
+    for i in range(1, len(offspring), 2):
+        if gene_info.rand.random() < cxpb:
+            c1, c2 = cross_meth_func(gene_info, offspring[i - 1], offspring[i])
+            offspring[i] = c1
+            offspring[i - 1] = c2
+
+    for i in range(len(offspring)):
+        if gene_info.rand.random() < mutpb:
+            offspring[i] = mut_flipper(gene_info, offspring[i])
+
+    return offspring
+
+
+def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: np.ndarray, cxpb: float,
+                    mutpb: float, ngen: int, cross_meth: Callable, elite=None, **kwargs):
     """
     This function runs an EA using the Sum of Ranks (SoR) fitness methodology.
 
@@ -254,113 +267,48 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: list[base]
     It is not meant to be exposed to users, and instead is only used
     internally by the package.
     """
-
     extra_returns: dict = {}
-
-    logbook = tools.Logbook()
-    logbook.header = ['gen', 'nevals']
-    if stats:
-        for obj in gene_info.obj_list:
-            logbook.header.append(f'new_gen_max_{obj}')
-            logbook.header.append(f'new_gen_mean_{obj}')
 
     # Offload SoR to table
     fit_series: np.ndarray
-    fit_series, obj_log_info = multi_eval(gene_info, population, 0)
-
-    # Update ALL fitness vals
-    for index, fit_val in enumerate(fit_series):
-        ## Single fitness value for the whole community (all genes in the community within one individual)
-        population[index].fitness.values = fit_val,
+    fit_series = multi_eval_nb(gene_info.data_numpy, population)
 
     # elite = [deepcopy(population[fit_series.argmax()])]
     elite = [deepcopy(population[fit_series.argmin()])]
-    # extra_returns.setdefault("elite_changed_temp", [])
-    # extra_returns.setdefault("elite", [])
-    # extra_returns["elite"].append(elite[0])
-    #
-    # extra_returns["elite_changed_temp"].append(elite[0].fitness.values[0])
-    logbook.record(gen=0, nevals='maximal-temp', **obj_log_info)
-    if verbose:
-        print(logbook.stream)
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
+        if gen % 10 == 0:
+            print(gen)
         # Select the next generation individuals to breed
         # TODO: select pop-1 and add elite
-        population.append(deepcopy(elite[0]))
-        breed_pop = toolbox.select(population, len(population) - 1)
+        breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series)
 
-        offspring = varAnd(breed_pop, toolbox, cxpb, mutpb)
-        offspring.append(deepcopy(elite[0]))
+        offspring = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth)
+        offspring[0] = deepcopy(elite[0])
 
         # TODO maybe no mutation on elite or at least ensure elite is there for fitness calc
 
         # Offload SoR to table
-        fit_series, obj_log_info = multi_eval(gene_info, offspring, gen)
-
-        # Update ALL fitness vals
-        for index, fit_val in enumerate(fit_series):
-            offspring[index].fitness.values = fit_val,
-
-        def string(list_of_ints):
-            return ','.join(str(i) for i in list_of_ints)
+        fit_series = multi_eval_nb(gene_info.data_numpy, offspring)
 
         # Strict elitism
 
-        # offspring.append(elite[0])
-
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
+        # best_offspring_fitness = offspring[fit_series.argmin()].fitness.values[0]
+        # elite_fitness = fit_series[offspring.index(elite[0])]
         elite = [
             # deepcopy(offspring[fit_series.argmax()]) if offspring[fit_series.argmax()].fitness.values[0] >= fit_series[offspring.index(elite[0])] else elite[0]]
             # deepcopy(offspring[fit_series.argmin()]) if offspring[fit_series.argmin()].fitness.values[0] <= fit_series[offspring.index(elite[0])] else elite[0]]
             deepcopy(offspring[fit_series.argmin()])]
-        # extra_returns.setdefault("elite_changed_temp", [])
         extra_returns.setdefault("elite", [])
-        # extra_returns["elite_changed_temp"].append(offspring[fit_series.argmax()].fitness.values[0])
         extra_returns["elite"].append(list(elite[0]))
-        # elite.update(offspring)
 
-        # if elite[0].fitness != offspring[fit_series.argmax()].fitness:
-        #     extra_returns.setdefault("elite_fitnesses", 0)
-        #     extra_returns["elite_fitnesses"] += 1
-        # else:
-        #     extra_returns.setdefault("elite_fitnesses_generation", [])
-        #     extra_returns["elite_fitnesses_generation"].append(gen)
-
-        # extra_returns.setdefault("elite", [None])
-        # if extra_returns["elite"][-1] != elite[0]:
-        #     extra_returns["elite"].append(elite[0])
-
-        # Why select the best again and not only update? Selection occurs at the beginning of the loop
-        population = offspring[:]
+        population = offspring
 
         # Update frontier based on elite index
         # How many times the gene has been seen in the elite community
-        for index in elite[0]:
-            gene_info.frontier[index] += 1
+        gene_info.frontier[elite[0]] += 1
 
-        # ranks[gen] = {
-        #     "elite": elite[0],
-        #     "frontier": gene_info.frontier,
-        #     "fitness": fit_series,
-        # }
-
-        # # Manually marking old individuals
-        # for indiv in population:
-        #     del indiv.fitness.values
-
-        # Append the current generation statistics to the logbook
-        logbook.record(gen=gen, nevals='maximal-temp', **obj_log_info)
-        if verbose:
-            print(logbook.stream)
-
-    # Check if elite ever happens to get smaller than a previous elite
-    # extra_returns.setdefault("elite_changed", False)
-    # for x in range(1, len(extra_returns["elite_changed_temp"])):
-    #     if extra_returns["elite_changed_temp"][x] < extra_returns["elite_changed_temp"][x-1]:
-    #         extra_returns["elite_changed"] = True
-    #         break
-    # del extra_returns["elite_changed_temp"]
-    return population, logbook, elite, extra_returns
+    return population, {}, elite, extra_returns
