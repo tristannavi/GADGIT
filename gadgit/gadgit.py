@@ -193,7 +193,7 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: 
     pop = np.array([indiv_builder(gene_info) for _ in range(ga_info.pop)])
 
     _, _, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb,
-                                               ga_info.gen, cross_meth, elite=[])
+                                               ga_info.gen, cross_meth, elite=[], kwargs=kwargs)
 
     return pop, {}, hof, extra_returns
 
@@ -243,15 +243,32 @@ def multi_eval_nb(data: np.ndarray,
     return len(population) - final_ranks
 
 
-def varAnd(offspring: np.ndarray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable):
-    # Apply crossover and mutation on the offspring
-    for i in range(1, len(offspring), 2):
+def varAnd(offspring: np.ndarray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
+              pop_size: int):
+    """
+    Apply crossover and mutation on a given population of offspring based on the provided parameters.
+    The function iterates over the population, performing crossover on adjacent individuals with a
+    probability determined by `cxpb`. It also applies mutation to individuals with a probability
+    determined by `mutpb`. These genetic operations help to introduce diversity and guide
+    the population towards better solutions in evolutionary algorithms. Forked from DEAP.
+
+    :param offspring: The population of individuals to which crossover and mutation will be applied.
+    :param cxpb: The probability of performing crossover between two individuals.
+    :param mutpb: The probability of mutating an individual in the population.
+    :param gene_info: Instance containing metadata and tools needed for genetic operations,
+        such as randomness generator and gene structure.
+    :param cross_meth_func: Function responsible for executing crossover between two individuals.
+    :param pop_size: Size of the population, indicating the number of individuals in `offspring`.
+
+    :return: The modified population of individuals after applying crossover and mutation operations.
+    """
+    for i in range(1, pop_size, 2):
         if gene_info.rand.random() < cxpb:
             c1, c2 = cross_meth_func(gene_info, offspring[i - 1], offspring[i])
             offspring[i] = c1
             offspring[i - 1] = c2
 
-    for i in range(len(offspring)):
+    for i in range(pop_size):
         if gene_info.rand.random() < mutpb:
             offspring[i] = mut_flipper(gene_info, offspring[i])
 
@@ -282,17 +299,18 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: np.ndarray
             print(gen)
         # Select the next generation individuals to breed
         # TODO: select pop-1 and add elite
-        breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series)
+        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
 
-        offspring = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth)
-        offspring[0] = deepcopy(elite[0])
+        offspring = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population) - 1)
+
+        # Strict elitism
+        offspring[len(population) - 1] = deepcopy(elite[0])
 
         # TODO maybe no mutation on elite or at least ensure elite is there for fitness calc
 
         # Offload SoR to table
         fit_series = multi_eval_nb(gene_info.data_numpy, offspring)
 
-        # Strict elitism
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
