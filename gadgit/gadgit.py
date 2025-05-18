@@ -3,6 +3,7 @@ from copy import deepcopy
 import numba
 
 import numpy as np
+from numpy import copy
 
 from gadgit import GeneInfo, GAInfo
 
@@ -96,7 +97,7 @@ def cx_OPS(gene_info: GeneInfo, ind1: np.ndarray, ind2: np.ndarray) -> tuple[np.
     """
 
     cxpoint = gene_info.rand.integers(1, gene_info.com_size - 1)
-    ind1[cxpoint:], ind2[cxpoint:] = ind2[cxpoint:], ind1[cxpoint:]
+    ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
 
     return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
 
