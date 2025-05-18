@@ -34,12 +34,6 @@ def cx_SDB(gene_info: GeneInfo, ind1: np.ndarray, ind2: np.ndarray):
     ind1[len(dealer) // 2:] = intersect
     ind2[:len(dealer) // 2] = dealer[len(dealer) // 2:]
     ind2[len(dealer) // 2:] = intersect
-    # assert (len(ind1) == gene_info.com_size and
-    #         len(ind2) == gene_info.com_size), 'SDB created invalid individual'
-    # assert set(gene_info.fixed_list_ids).issubset(ind1), \
-    #     'Ind1 does not possess all fixed genes after crossover'
-    # assert set(gene_info.fixed_list_ids).issubset(ind2), \
-    #     'Ind2 does not possess all fixed genes after crossover'
 
     return ind1, ind2
 
@@ -89,11 +83,6 @@ def self_correction(gene_info: GeneInfo, individual: np.ndarray) -> np.ndarray:
             individual[valid_remove(gene_info, individual)] = -1
         return np.delete(individual, np.where(individual == -1))
 
-    # assert len(individual) == gene_info.com_size, \
-    #     'Self correction failed to create indiv with proper size'
-    # assert set(gene_info.fixed_list_ids).issubset(individual), \
-    #     'Individual not possess all fixed genes after self correction'
-
     return individual
 
 
@@ -117,14 +106,8 @@ def mut_flipper(gene_info: GeneInfo, individual: np.ndarray) -> np.ndarray:
 
     Must not allow the choice of a fixed gene to be turned off.
     """
-    # assert len(individual) == gene_info.com_size, \
-    #     'Mutation received invalid indiv'
     remove = valid_remove(gene_info, individual)
     individual[remove] = valid_add(gene_info, individual)
-    # assert len(individual) == gene_info.com_size, \
-    #     'Mutation created an invalid indiv'
-    # assert set(gene_info.fixed_list_ids).issubset(individual), \
-    #     ('Individual does not possess all fixed genes after mutation')
 
     return individual
 
