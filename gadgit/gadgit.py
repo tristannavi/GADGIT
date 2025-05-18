@@ -79,13 +79,13 @@ def self_correction(gene_info: GeneInfo, individual: np.ndarray) -> np.ndarray:
         while size isn't right; add or remove
     """
     individual = np.unique(np.append(individual, gene_info.fixed_list_ids))
-    if gene_info.gene_count - len(individual) > 0:
-        temp = np.zeros(shape=(gene_info.gene_count - len(individual)))
+    if gene_info.com_size - len(individual) > 0:
+        temp = np.zeros(shape=(gene_info.com_size - len(individual)))
         for x in range(len(temp)):
             temp[x] = valid_add(gene_info, individual)
         return np.append(individual, temp)
-    elif gene_info.gene_count - len(individual) < 0:
-        for _ in range(abs(gene_info.gene_count - len(individual))):
+    elif gene_info.com_size - len(individual) < 0:
+        for _ in range(abs(gene_info.com_size - len(individual))):
             individual[valid_remove(gene_info, individual)] = -1
         return np.delete(individual, np.where(individual == -1))
 
@@ -106,7 +106,7 @@ def cx_OPS(gene_info: GeneInfo, ind1: np.ndarray, ind2: np.ndarray) -> tuple[np.
     individuals it generates.
     """
 
-    cxpoint = gene_info.rand.randint(1, gene_info.com_size - 1)
+    cxpoint = gene_info.rand.integers(1, gene_info.com_size - 1)
     ind1[cxpoint:], ind2[cxpoint:] = ind2[cxpoint:], ind1[cxpoint:]
 
     return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
