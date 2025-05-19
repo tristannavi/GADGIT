@@ -68,5 +68,6 @@ class GeneInfo:
             f"\tGene Count: {self.gene_count}\n"
             f"\tObjectives: {self.obj_list}\n"
             f"\tCommunity size: {self.com_size}\n"
-            f"\tFixed Genes: {self.fixed_list}"
+            f"\tFixed Genes: {self.fixed_list}\n"
+            f"\tSeed: {self.seed}"
         )

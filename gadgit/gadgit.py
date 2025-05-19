@@ -4,11 +4,12 @@ import numba
 
 import numpy as np
 from numpy import copy
+from numpy.typing import NDArray
 
 from gadgit import GeneInfo, GAInfo
 
 
-def cx_SDB(gene_info: GeneInfo, ind1: np.ndarray, ind2: np.ndarray):
+def cx_SDB(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray):
     """SDB Crossover
 
     Computes the intersection and asserts that after the intersection,
@@ -39,7 +40,7 @@ def cx_SDB(gene_info: GeneInfo, ind1: np.ndarray, ind2: np.ndarray):
     return ind1, ind2
 
 
-def valid_add(gene_info: GeneInfo, individual: np.ndarray) -> int:
+def valid_add(gene_info: GeneInfo, individual: NDArray, len: int | None = None) -> int:
     """
     Determines a valid addition to an individual's gene sequence from available genes.
 
@@ -55,17 +56,19 @@ def valid_add(gene_info: GeneInfo, individual: np.ndarray) -> int:
     :return: A randomly selected valid gene index that can be added
         to the individual's sequence.
     """
-    return gene_info.rand.choice(np.setdiff1d(np.arange(gene_info.gene_count), individual, assume_unique=True))
+    return gene_info.rand.choice(np.setdiff1d(np.arange(gene_info.gene_count), individual, assume_unique=True), len,
+                                 replace=False)
 
 
-def valid_remove(gene_info: GeneInfo, individual: np.ndarray) -> int:
+def valid_remove(gene_info: GeneInfo, individual: NDArray, len: int | None = None) -> int:
     """Based on gene info, removed an index from an individual that respects
     fixed genes
     """
-    return gene_info.rand.choice(np.nonzero(np.invert(np.isin(individual, gene_info.fixed_list_ids)))[0])
+    return gene_info.rand.choice(np.nonzero(np.invert(np.isin(individual, gene_info.fixed_list_ids)))[0], len,
+                                 replace=False)
 
 
-def self_correction(gene_info: GeneInfo, individual: np.ndarray) -> np.ndarray:
+def self_correction(gene_info: GeneInfo, individual: NDArray) -> NDArray:
     """This function takes a potentially broken individual and returns a
     correct one.
 
@@ -74,20 +77,17 @@ def self_correction(gene_info: GeneInfo, individual: np.ndarray) -> np.ndarray:
         while size isn't right; add or remove
     """
     individual = np.unique(np.append(individual, gene_info.fixed_list_ids))
+    # Too few genes
     if gene_info.com_size - len(individual) > 0:
-        temp = np.zeros(shape=(gene_info.com_size - len(individual)))
-        for x in range(len(temp)):
-            temp[x] = valid_add(gene_info, individual)
-        return np.append(individual, temp)
+        return np.append(individual, valid_add(gene_info, individual, gene_info.com_size - len(individual)))
+    # Too many genes
     elif gene_info.com_size - len(individual) < 0:
-        for _ in range(abs(gene_info.com_size - len(individual))):
-            individual[valid_remove(gene_info, individual)] = -1
-        return np.delete(individual, np.where(individual == -1))
+        return np.delete(individual, valid_remove(gene_info, individual, len(individual) - gene_info.com_size))
 
     return individual
 
 
-def cx_OPS(gene_info: GeneInfo, ind1: np.ndarray, ind2: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, NDArray]:
     """Standard one-point crossover implemented for set individuals.
 
     Self correction is handled by abstracted function.
@@ -102,7 +102,7 @@ def cx_OPS(gene_info: GeneInfo, ind1: np.ndarray, ind2: np.ndarray) -> tuple[np.
     return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
 
 
-def mut_flipper(gene_info: GeneInfo, individual: np.ndarray) -> np.ndarray:
+def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
     """Flip based mutation. Flip one off to on, and one on to off.
 
     Must not allow the choice of a fixed gene to be turned off.
@@ -113,17 +113,22 @@ def mut_flipper(gene_info: GeneInfo, individual: np.ndarray) -> np.ndarray:
     return individual
 
 
-def indiv_builder(gene_info: GeneInfo) -> np.ndarray:
+def indiv_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
     """Implementation of forcing fixed genes in creation of new individual."""
+    population = np.zeros(shape=(pop_size, gene_info.com_size), dtype=np.int64)
     num_choices = gene_info.com_size - len(gene_info.fixed_list)
     valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_ids))
-    base_indiv = np.pad(gene_info.fixed_list_ids, (0, num_choices), 'constant')
-    base_indiv[len(gene_info.fixed_list_ids):] = gene_info.rand.choice(valid_choices, num_choices, replace=False)
-    return base_indiv
+
+    for i in range(pop_size):
+        base_indiv = np.pad(gene_info.fixed_list_ids, (0, num_choices), 'constant')
+        base_indiv[len(gene_info.fixed_list_ids):] = gene_info.rand.choice(valid_choices, num_choices, replace=False)
+        population[i] = base_indiv
+
+    return population
 
 
-def tournament_selection(gene_info: GeneInfo, individuals: np.ndarray, k: int, tournsize: int,
-                         fitneses: np.ndarray, max: bool = False) -> np.ndarray:
+def tournament_selection(gene_info: GeneInfo, individuals: NDArray, k: int, tournsize: int,
+                         fitneses: NDArray, max: bool = False) -> NDArray:
     """Select the best individual among *tournsize* randomly chosen
     individuals, *k* times. The list returned contains
     references to the input *individuals*.
@@ -174,16 +179,16 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, mapper: Callable = map, swap_meth: 
     else:
         raise AttributeError('Invalid crossover string specified')
 
-    pop = np.array([indiv_builder(gene_info) for _ in range(ga_info.pop)])
+    pop = indiv_builder(gene_info, ga_info.pop)
 
-    _, _, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb,
-                                               ga_info.gen, cross_meth, elite=[], kwargs=kwargs)
+    _, _, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
+                                               cross_meth, kwargs=kwargs)
 
     return pop, {}, hof, extra_returns
 
 
 @numba.njit
-def _dense_rank(a: np.ndarray) -> np.ndarray:
+def _dense_rank(a: NDArray) -> NDArray:
     # returns 1-based dense ranks of 1D array a
     unique = np.unique(a)
     ranks = np.empty(a.shape, np.int64)
@@ -198,9 +203,9 @@ def _dense_rank(a: np.ndarray) -> np.ndarray:
 
 
 @numba.njit
-def multi_eval_nb(data: np.ndarray,
-                  population: np.ndarray
-                  ) -> np.ndarray:
+def multi_eval_nb(data: NDArray,
+                  population: NDArray
+                  ) -> NDArray:
     pop_size, genome_len = population.shape
     num_objs = data.shape[1]
 
@@ -227,8 +232,8 @@ def multi_eval_nb(data: np.ndarray,
     return len(population) - final_ranks
 
 
-def varAnd(offspring: np.ndarray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
-              pop_size: int):
+def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
+           pop_size: int):
     """
     Apply crossover and mutation on a given population of offspring based on the provided parameters.
     The function iterates over the population, performing crossover on adjacent individuals with a
@@ -259,8 +264,8 @@ def varAnd(offspring: np.ndarray, cxpb: float, mutpb: float, gene_info: GeneInfo
     return offspring
 
 
-def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: np.ndarray, cxpb: float,
-                    mutpb: float, ngen: int, cross_meth: Callable, elite=None, **kwargs):
+def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, cxpb: float, mutpb: float, ngen: int,
+                    cross_meth: Callable, **kwargs):
     """
     This function runs an EA using the Sum of Ranks (SoR) fitness methodology.
 
@@ -271,7 +276,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: np.ndarray
     extra_returns: dict = {}
 
     # Offload SoR to table
-    fit_series: np.ndarray
+    fit_series: NDArray
     fit_series = multi_eval_nb(gene_info.data_numpy, population)
 
     # elite = [deepcopy(population[fit_series.argmax()])]
@@ -294,7 +299,6 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: np.ndarray
 
         # Offload SoR to table
         fit_series = multi_eval_nb(gene_info.data_numpy, offspring)
-
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!

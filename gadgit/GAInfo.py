@@ -52,5 +52,4 @@ class GAInfo:
             f"\tMutation: {self.mutpb}\n"
             f"\tTournament: {self.nk}\n"
             f"\tCross Method: {self.cross_meth}\n"
-            # f"\tSeed: {self.seed}"
         )
