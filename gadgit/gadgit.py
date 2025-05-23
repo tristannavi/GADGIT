@@ -49,6 +49,7 @@ def valid_add(gene_info: GeneInfo, individual: NDArray, len: int | None = None) 
     the `gene_info` object. It excludes the indices already existing in the `individual`
     sequence and randomly selects one from the remaining valid indices.
 
+    :param len:
     :param gene_info: An object that contains information about available genes,
         including their total count in the `gene_count` attribute.
     :param individual: A list containing the indices of genes that
@@ -279,8 +280,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     fit_series: NDArray
     fit_series = multi_eval_nb(gene_info.data_numpy, population)
 
-    # elite = [deepcopy(population[fit_series.argmax()])]
-    elite = [deepcopy(population[fit_series.argmin()])]
+    elite = [deepcopy(population[fit_series.argmax()])]
+    # elite = [deepcopy(population[fit_series.argmin()])]
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
@@ -288,7 +289,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
             print(gen)
         # Select the next generation individuals to breed
         # TODO: select pop-1 and add elite
-        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
+        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series, max=True)
 
         offspring = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population) - 1)
 
@@ -305,9 +306,9 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # best_offspring_fitness = offspring[fit_series.argmin()].fitness.values[0]
         # elite_fitness = fit_series[offspring.index(elite[0])]
         elite = [
-            # deepcopy(offspring[fit_series.argmax()]) if offspring[fit_series.argmax()].fitness.values[0] >= fit_series[offspring.index(elite[0])] else elite[0]]
+            deepcopy(offspring[fit_series.argmax()]) if offspring[fit_series.argmax()].fitness.values[0] >= fit_series[offspring.index(elite[0])] else elite[0]]
             # deepcopy(offspring[fit_series.argmin()]) if offspring[fit_series.argmin()].fitness.values[0] <= fit_series[offspring.index(elite[0])] else elite[0]]
-            deepcopy(offspring[fit_series.argmin()])]
+            # deepcopy(offspring[fit_series.argmin()])]
         extra_returns.setdefault("elite", [])
         extra_returns["elite"].append(list(elite[0]))
 
