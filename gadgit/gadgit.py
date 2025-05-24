@@ -152,6 +152,7 @@ def indiv_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
     for i in range(pop_size):
         base_indiv = np.pad(gene_info.fixed_list_ids, (0, num_choices), 'constant')
         base_indiv[len(gene_info.fixed_list_ids):] = gene_info.rand.choice(valid_choices, num_choices, replace=False)
+        gene_info.rand.shuffle(base_indiv)
         population[i] = base_indiv
 
     return population
