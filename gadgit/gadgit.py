@@ -107,7 +107,8 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, 
     cxpoint = gene_info.rand.integers(1, gene_info.com_size - 1)
     ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
 
-    return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
+    # return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
+    return ind1, ind2
 
 
 def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
@@ -146,13 +147,13 @@ def indiv_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
         individual and each column is a gene ID.
     """
     population = np.zeros(shape=(pop_size, gene_info.com_size), dtype=np.int64)
-    num_choices = gene_info.com_size - len(gene_info.fixed_list)
+    num_choices = gene_info.com_size# - len(gene_info.fixed_list)
     valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_ids))
 
     for i in range(pop_size):
-        base_indiv = np.pad(gene_info.fixed_list_ids, (0, num_choices), 'constant')
-        base_indiv[len(gene_info.fixed_list_ids):] = gene_info.rand.choice(valid_choices, num_choices, replace=False)
-        gene_info.rand.shuffle(base_indiv)
+        # base_indiv = np.zeros(shape=gene_info.com_size)#np.pad(gene_info.fixed_list_ids, (0, num_choices), 'constant')
+        base_indiv = gene_info.rand.choice(valid_choices, num_choices, replace=False)
+        # gene_info.rand.shuffle(base_indiv)
         population[i] = base_indiv
 
     return population
@@ -246,7 +247,8 @@ def _dense_rank(a: NDArray) -> NDArray:
 
 @numba.njit
 def multi_eval_nb(data: NDArray,
-                  population: NDArray
+                  population: NDArray,
+                  fixed: np.float64
                   ) -> NDArray:
     pop_size, genome_len = population.shape
     num_objs = data.shape[1]
@@ -258,6 +260,7 @@ def multi_eval_nb(data: NDArray,
             idx = population[i, g]
             for o in range(num_objs):
                 all_rows[i, o] += data[idx, o]
+                all_rows[i, o] += fixed
 
     # prepare output array
     sor = np.zeros_like(all_rows)
@@ -319,7 +322,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
     # Offload SoR to table
     fit_series: NDArray
-    fit_series = multi_eval_nb(gene_info.data_numpy, population)
+    fit_series = multi_eval_nb(gene_info.data_numpy, population, gene_info.betweenness)
 
     elite = [deepcopy(population[fit_series.argmax()])]
     # elite = [deepcopy(population[fit_series.argmin()])]
@@ -340,7 +343,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # TODO maybe no mutation on elite or at least ensure elite is there for fitness calc
 
         # Offload SoR to table
-        fit_series = multi_eval_nb(gene_info.data_numpy, offspring)
+        fit_series = multi_eval_nb(gene_info.data_numpy, offspring, gene_info.betweenness)
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!

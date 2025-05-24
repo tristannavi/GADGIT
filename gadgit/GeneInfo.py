@@ -56,7 +56,8 @@ class GeneInfo:
         # self.data_frame = self.data_frame.loc[new_index_order].reset_index(drop=True)
         # self.fixed_list_ids = [x for x in range(len(self.fixed_list))]
 
-        self.com_size = com_size
+        self.com_size = com_size - len(fixed_list)
+        self.betweenness = self.data_numpy[self.fixed_list_ids, 0].sum(axis=0)
         self.frontier = np.zeros(shape=self.gene_count)#[0 for x in range(self.gene_count)]
         self.seed = seed
         self.rand = np.random.default_rng(PCG64DXSM(seed))
