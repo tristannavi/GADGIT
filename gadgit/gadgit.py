@@ -107,6 +107,15 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, 
     cxpoint = gene_info.rand.integers(1, gene_info.com_size - 1)
     ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
 
+    ind1 = np.unique(ind1)
+    ind2 = np.unique(ind2)
+
+    if len(ind1) != gene_info.com_size:
+        ind1 = np.append(ind1, valid_add(gene_info, ind1, gene_info.com_size - len(ind1)))
+
+    if len(ind2) != gene_info.com_size:
+        ind2 = np.append(ind2, valid_add(gene_info, ind2, gene_info.com_size - len(ind2)))
+
     # return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
     return ind1, ind2
 
@@ -147,7 +156,7 @@ def indiv_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
         individual and each column is a gene ID.
     """
     population = np.zeros(shape=(pop_size, gene_info.com_size), dtype=np.int64)
-    num_choices = gene_info.com_size# - len(gene_info.fixed_list)
+    num_choices = gene_info.com_size  # - len(gene_info.fixed_list)
     valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_ids))
 
     for i in range(pop_size):
