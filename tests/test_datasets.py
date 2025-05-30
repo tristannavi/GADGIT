@@ -1,20 +1,32 @@
+from enum import Enum
+from typing import Any
+
 import pandas as pd
 from pandas import DataFrame
 
 from gadgit import GeneInfo
 
+
+class AttributeCount(Enum):
+    ONE, TWO = 1, 2
+
+
+class Duplicate(Enum):
+    ONE, TWO = 1, 2
+
+
 individuals = [
-    [5, 10, 24, 40, 42, 47, 63, 80, 94, 96],
-    [5, 10, 24, 40, 42, 47, 63, 80, 94, 96],
-    [5, 10, 24, 27, 49, 57, 63, 67, 88, 95],
-    [3, 5, 10, 12, 13, 29, 53, 57, 58, 59],
-    [3, 5, 7, 10, 16, 21, 34, 35, 75, 77],
-    [2, 5, 7, 10, 20, 35, 45, 48, 67, 98],
-    [5, 10, 22, 29, 31, 48, 52, 69, 76, 85],
-    [5, 10, 14, 19, 31, 36, 53, 76, 94, 98],
-    [5, 7, 10, 27, 29, 33, 58, 62, 80, 95],
-    [5, 10, 15, 18, 31, 35, 48, 49, 64, 69],
-    [5, 10, 24, 27, 49, 57, 63, 67, 88, 95],
+    [24, 40, 42, 47, 63, 80, 94, 96],
+    [24, 40, 42, 47, 63, 80, 94, 96],
+    [24, 27, 49, 57, 63, 67, 88, 95],
+    [3, 12, 13, 29, 53, 57, 58, 59],
+    [3, 7, 16, 21, 34, 35, 75, 77],
+    [2, 7, 20, 35, 45, 48, 67, 98],
+    [22, 29, 31, 48, 52, 69, 76, 85],
+    [14, 19, 31, 36, 53, 76, 94, 98],
+    [7, 27, 29, 33, 58, 62, 80, 95],
+    [15, 18, 31, 35, 48, 49, 64, 69],
+    [24, 27, 49, 57, 63, 67, 88, 95],
 ]
 
 
@@ -78,19 +90,18 @@ def make_data_frame() -> DataFrame:
     return pd.DataFrame.from_dict(dict_values, orient="columns")
 
 
-def get_population(duplicate: bool) -> list[list[int]]:
-    if duplicate:
-        return individuals[0:10]
-    else:
-        return individuals[0:1] + individuals[2:]
+def get_population(duplicate: bool = False) -> list[list[int] | Any] | None:
+    match duplicate:
+        case True:
+            return individuals[0:10]
+        case False:
+            return individuals[0:1] + individuals[2:]
+    return None
 
 
 def get_gene_info_one_attribute() -> GeneInfo:
-    return GeneInfo(make_data_frame(), ['Betweenness'], fixed_list=["5", "10"], com_size=10)
+    return GeneInfo(make_data_frame(), ['Betweenness'], fixed_list=["5", "10"], com_size=8, seed=1)
 
 
 def get_gene_info_two_attributes() -> GeneInfo:
-    return GeneInfo(make_data_frame(), ['Betweenness', 'Other'], fixed_list=["5", "10"], com_size=10)
-
-
-print(make_data_frame())
+    return GeneInfo(make_data_frame(), ['Betweenness', 'Other'], fixed_list=["5", "10"], com_size=8, seed=1)

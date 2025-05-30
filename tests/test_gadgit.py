@@ -1,29 +1,36 @@
-import random
-
 import numpy as np
-import pytest
 from numpy.ma.testutils import assert_array_equal
 
 import gadgit.gadgit
-from test_datasets import get_gene_info_two_attributes, get_gene_info_one_attribute, get_population
+from gadgit import GeneInfo
+from test_datasets import get_gene_info_two_attributes, get_gene_info_one_attribute, get_population, individuals
 
-# random.seed(1)
+
 class Test:
-    @pytest.fixture
-    def setup(self):
-        self.two_attributes = get_gene_info_two_attributes()
-        self.one_attribute = get_gene_info_one_attribute()
 
-    @pytest.mark.usefixtures("setup")
-    def test_multi_eval_duplicate_individual(self):
-        assert_array_equal(gadgit.gadgit.multi_eval(self.two_attributes, get_population(True)),
-                           [7, 7, 4, 1, 2, 8, 9, 6, 3, 5])
+    def test_fitness_duplicate_individual_two_attributes(self):
+        gene_info: GeneInfo = get_gene_info_two_attributes()
+        population = get_population(True)
+        sum: np.float64 = gene_info.data_frame[gene_info.data_frame["GeneName"].isin(gene_info.fixed_list)][
+            gene_info.obj_list].sum()
+        assert_array_equal(
+            gadgit.gadgit.multi_eval_nb(np.array(gene_info.data_frame[gene_info.obj_list]), np.array(population),
+                                        np.array(sum)),
+            [7, 7, 4, 1, 2, 8, 9, 6, 3, 5])
 
-        assert_array_equal(gadgit.gadgit.multi_eval(self.one_attribute, get_population(True)),
-                           [9, 9, 6, 1, 3, 7, 8, 4, 2, 5])
+    def test_fitness_duplicate_individual_one_attribute(self):
+        gene_info: GeneInfo = get_gene_info_one_attribute()
+        population = get_population(True)
+        sum: np.float64 = gene_info.data_frame[gene_info.data_frame["GeneName"].isin(gene_info.fixed_list)][
+            gene_info.obj_list].sum()
+        assert_array_equal(
+            gadgit.gadgit.multi_eval_nb(np.array(gene_info.data_frame[gene_info.obj_list]), np.array(population),
+                                        np.array(sum)),
+            [9, 9, 6, 1, 3, 7, 8, 4, 2, 5])
 
-    def test_indiv_builder(self, setup):
-        indiv = gadgit.gadgit.indiv_builder(self.one_attribute)
-        assert 5 in indiv
-        assert 10 in indiv
-        assert len(indiv) == 10
+    def test_indiv_builder(self):
+        gene_info = get_gene_info_one_attribute()
+        indiv = gadgit.gadgit.indiv_builder(gene_info, gene_info.com_size)
+        assert 5 not in indiv
+        assert 10 not in indiv
+        assert len(indiv) == gene_info.com_size
