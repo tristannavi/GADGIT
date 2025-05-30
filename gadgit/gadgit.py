@@ -74,16 +74,16 @@ def self_correction(gene_info: GeneInfo, individual: NDArray) -> NDArray:
     correct one.
 
     Procedure:
-        Add all fixed genes
-        while size isn't right; add or remove
+        If the number of unique genes is lower than the required number,
+        replace all duplicated genes with new ones
     """
-    individual = np.unique(np.append(individual, gene_info.fixed_list_ids))
+    unique, unique_indices = np.unique(individual, return_index=True)
+    mask = np.ones(len(individual), np.bool)
+    mask[unique_indices] = 0
     # Too few genes
-    if gene_info.com_size - len(individual) > 0:
-        return np.append(individual, valid_add(gene_info, individual, gene_info.com_size - len(individual)))
-    # Too many genes
-    elif gene_info.com_size - len(individual) < 0:
-        return np.delete(individual, valid_remove(gene_info, individual, len(individual) - gene_info.com_size))
+    if len(unique) < gene_info.com_size:
+        individual[mask] = valid_add(gene_info, unique, gene_info.com_size - len(
+            unique))
 
     return individual
 
@@ -107,17 +107,7 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, 
     cxpoint = gene_info.rand.integers(1, gene_info.com_size - 1)
     ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
 
-    ind1 = np.unique(ind1)
-    ind2 = np.unique(ind2)
-
-    if len(ind1) != gene_info.com_size:
-        ind1 = np.append(ind1, valid_add(gene_info, ind1, gene_info.com_size - len(ind1)))
-
-    if len(ind2) != gene_info.com_size:
-        ind2 = np.append(ind2, valid_add(gene_info, ind2, gene_info.com_size - len(ind2)))
-
-    # return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
-    return ind1, ind2
+    return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
 
 
 def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
@@ -233,7 +223,7 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
 
     pop = indiv_builder(gene_info, ga_info.pop)
 
-    _, _, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
+    pop, _, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
                                                cross_meth, kwargs=kwargs)
 
     return pop, {}, hof, extra_returns
