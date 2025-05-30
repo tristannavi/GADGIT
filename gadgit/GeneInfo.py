@@ -48,7 +48,7 @@ class GeneInfo:
         self.obj_list = obj_list
         self.fixed_list = fixed_list
         self.fixed_list_ids = np.array(self.data_frame[
-            self.data_frame['GeneName'].isin(fixed_list)].index.to_list())
+                                           self.data_frame['GeneName'].isin(fixed_list)].index.to_list())
 
         # Reorder the dataframe so that the fixed genes appear first
         # to_appear_first = self.fixed_list_ids
@@ -57,8 +57,9 @@ class GeneInfo:
         # self.fixed_list_ids = [x for x in range(len(self.fixed_list))]
 
         self.com_size = com_size - len(fixed_list)
-        self.betweenness = self.data_numpy[self.fixed_list_ids, 0].sum(axis=0)
-        self.frontier = np.zeros(shape=self.gene_count)#[0 for x in range(self.gene_count)]
+        self.sum = self.data_frame[self.data_frame["GeneName"].isin(self.fixed_list)][
+            self.obj_list].sum().to_numpy()
+        self.frontier = np.zeros(shape=self.gene_count)  # [0 for x in range(self.gene_count)]
         self.seed = seed
         self.rand = np.random.default_rng(PCG64DXSM(seed))
 
@@ -68,7 +69,7 @@ class GeneInfo:
             f"\tFrame path: {self.frame_path}\n"
             f"\tGene Count: {self.gene_count}\n"
             f"\tObjectives: {self.obj_list}\n"
-            f"\tCommunity size: {self.com_size}\n"
+            f"\tCommunity size: {self.com_size + len(self.fixed_list)}\n"
             f"\tFixed Genes: {self.fixed_list}\n"
             f"\tSeed: {self.seed}"
         )

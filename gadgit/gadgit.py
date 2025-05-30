@@ -224,7 +224,7 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
     pop = indiv_builder(gene_info, ga_info.pop)
 
     pop, _, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
-                                               cross_meth, kwargs=kwargs)
+                                                 cross_meth, kwargs=kwargs)
 
     return pop, {}, hof, extra_returns
 
@@ -247,7 +247,8 @@ def _dense_rank(a: NDArray) -> NDArray:
 @numba.njit
 def multi_eval_nb(data: NDArray,
                   population: NDArray,
-                  fixed: np.float64
+                  fixed: NDArray,
+                  minimize: np.bool = False
                   ) -> NDArray:
     pop_size, genome_len = population.shape
     num_objs = data.shape[1]
@@ -259,7 +260,7 @@ def multi_eval_nb(data: NDArray,
             idx = population[i, g]
             for o in range(num_objs):
                 all_rows[i, o] += data[idx, o]
-                all_rows[i, o] += fixed
+                all_rows[i, o] += fixed[o]
 
     # prepare output array
     sor = np.zeros_like(all_rows)
@@ -273,7 +274,10 @@ def multi_eval_nb(data: NDArray,
     obj_sums = np.sum(sor, axis=1)
     final_ranks = _dense_rank(obj_sums)
 
-    return final_ranks
+    if minimize:
+        return len(population) - final_ranks
+    else:
+        return final_ranks
 
 
 def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
@@ -321,7 +325,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
     # Offload SoR to table
     fit_series: NDArray
-    fit_series = multi_eval_nb(gene_info.data_numpy, population, gene_info.betweenness)
+    fit_series = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum)
 
     elite = [deepcopy(population[fit_series.argmax()])]
     # elite = [deepcopy(population[fit_series.argmin()])]
@@ -342,7 +346,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # TODO maybe no mutation on elite or at least ensure elite is there for fitness calc
 
         # Offload SoR to table
-        fit_series = multi_eval_nb(gene_info.data_numpy, offspring, gene_info.betweenness)
+        fit_series = multi_eval_nb(gene_info.data_numpy, offspring, gene_info.sum)
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
