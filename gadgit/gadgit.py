@@ -336,7 +336,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
             print(gen)
         # Select the next generation individuals to breed
         # TODO: select pop-1 and add elite
-        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series, max=True)
+        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series, max=False)
 
         offspring = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population) - 1)
 
