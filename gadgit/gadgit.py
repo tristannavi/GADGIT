@@ -327,8 +327,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     fit_series: NDArray
     fit_series = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum)
 
-    elite = [deepcopy(population[fit_series.argmax()])]
-    # elite = [deepcopy(population[fit_series.argmin()])]
+    # elite = [deepcopy(population[fit_series.argmax()])]
+    elite = [deepcopy(population[fit_series.argmin()])]
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
@@ -353,12 +353,12 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # best_offspring_fitness = offspring[fit_series.argmin()].fitness.values[0]
         # elite_fitness = fit_series[offspring.index(elite[0])]
 
-        best_current = fit_series.argmax()
-        current_elite_fitness = fit_series[np.where((offspring == elite[0]).all(1))[0][0]]
-        elite = [deepcopy(offspring[fit_series.argmax()]) if best_current >= current_elite_fitness else elite[0]]
-        # deepcopy(offspring[fit_series.argmin()])]
-        extra_returns.setdefault("elite", [])
-        extra_returns["elite"].append(list(elite[0]))
+        # best_current = fit_series.argmax()
+        # current_elite_fitness = fit_series[np.where((offspring == elite[0]).all(1))[0][0]]
+        # elite = [deepcopy(offspring[fit_series.argmax()]) if best_current >= current_elite_fitness else elite[0]]
+        elite = [deepcopy(offspring[fit_series.argmin()])]
+        # extra_returns.setdefault("elite", [])
+        # extra_returns["elite"].append(list(elite[0]))
 
         population = offspring
 
