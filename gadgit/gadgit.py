@@ -40,7 +40,7 @@ def cx_SDB(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray):
     return ind1, ind2
 
 
-def valid_add(gene_info: GeneInfo, individual: NDArray, len: int | None = None) -> int:
+def valid_add(gene_info: GeneInfo, individual: NDArray, count: int | None = None) -> int:
     """
     Determines a valid addition to an individual's gene sequence from available genes.
 
@@ -49,7 +49,7 @@ def valid_add(gene_info: GeneInfo, individual: NDArray, len: int | None = None) 
     the `gene_info` object. It excludes the indices already existing in the `individual`
     sequence and randomly selects one from the remaining valid indices.
 
-    :param len:
+    :param count: The number of valid genes to select. Defaults to 1.
     :param gene_info: An object that contains information about available genes,
         including their total count in the `gene_count` attribute.
     :param individual: A list containing the indices of genes that
@@ -57,33 +57,39 @@ def valid_add(gene_info: GeneInfo, individual: NDArray, len: int | None = None) 
     :return: A randomly selected valid gene index that can be added
         to the individual's sequence.
     """
-    return gene_info.rand.choice(np.setdiff1d(np.arange(gene_info.gene_count), individual, assume_unique=True), len,
+    return gene_info.rand.choice(np.setdiff1d(np.arange(gene_info.gene_count), individual, assume_unique=True), count,
                                  replace=False)
 
 
-def valid_remove(gene_info: GeneInfo, individual: NDArray, len: int | None = None) -> int:
-    """Based on gene info, removed an index from an individual that respects
-    fixed genes
-    """
-    return gene_info.rand.choice(np.nonzero(np.invert(np.isin(individual, gene_info.fixed_list_ids)))[0], len,
-                                 replace=False)
+def valid_remove(gene_info: GeneInfo, individual: NDArray, count: int | None = None) -> int:
+    return gene_info.rand.choice(individual, count, replace=False)
 
 
 def self_correction(gene_info: GeneInfo, individual: NDArray) -> NDArray:
-    """This function takes a potentially broken individual and returns a
-    correct one.
-
-    Procedure:
-        If the number of unique genes is lower than the required number,
-        replace all duplicated genes with new ones
     """
+    Performs a self-correction operation on an individual's gene representation to
+    ensure that it meets the required number of unique components. If the unique
+    genes within the individual are fewer than the required `com_size` defined in
+    `gene_info`, the missing genes are replaced accordingly.
+
+    This function identifies the unique genes within the individual and their indices in the original array.
+    A mask is used to ensure that the genes do not get sorted, and only ones that should be changed will be changed.
+
+    :param gene_info: Contains information about the gene, including size and
+        configuration constraints required for the individual.
+    :param individual: An array-like structure representing the individual's genes.
+        The array contains gene indices that define this particular individual.
+    :return: A corrected version of the individual's genes, ensuring that it
+        contains the required number of unique components as specified in
+        `gene_info`.
+    """
+
     unique, unique_indices = np.unique(individual, return_index=True)
     mask = np.ones(len(individual), np.bool)
     mask[unique_indices] = 0
-    # Too few genes
+    # If there are too few genes in the unique array, add more
     if len(unique) < gene_info.com_size:
-        individual[mask] = valid_add(gene_info, unique, gene_info.com_size - len(
-            unique))
+        individual[mask] = valid_add(gene_info, unique, gene_info.com_size - len(unique))
 
     return individual
 
@@ -94,7 +100,7 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, 
     of two parent individuals by swapping a segment of their genetic information at a randomly generated crossover point.
     The crossover point is determined by using the random integer generator from the provided gene information. After the
     swap, the individuals are adjusted by applying the self-correction function to ensure consistency or validity based
-    on specific rules.
+    on specific rules. Forked from DEAP.
 
     :param gene_info: An instance of GeneInfo that contains genetic information and the random number generator used
         for determining the crossover point.
@@ -248,7 +254,7 @@ def _dense_rank(a: NDArray) -> NDArray:
 def multi_eval_nb(data: NDArray,
                   population: NDArray,
                   fixed: NDArray,
-                  minimize: np.bool = False
+                  maximize: np.bool = False
                   ) -> NDArray:
     pop_size, genome_len = population.shape
     num_objs = data.shape[1]
@@ -274,7 +280,7 @@ def multi_eval_nb(data: NDArray,
     obj_sums = np.sum(sor, axis=1)
     final_ranks = _dense_rank(obj_sums)
 
-    if minimize:
+    if maximize:
         return len(population) - final_ranks
     else:
         return final_ranks
@@ -299,6 +305,7 @@ def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, c
 
     :return: The modified population of individuals after applying crossover and mutation operations.
     """
+    # TODO: Check with one indiv for whole thing i.e. same indiv for whole population that crossover works here
     for i in range(1, pop_size, 2):
         if gene_info.rand.random() < cxpb:
             c1, c2 = cross_meth_func(gene_info, offspring[i - 1], offspring[i])
@@ -335,15 +342,12 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         if gen % 10 == 0:
             print(gen)
         # Select the next generation individuals to breed
-        # TODO: select pop-1 and add elite
         breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series, max=False)
 
         offspring = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population) - 1)
 
         # Strict elitism
         offspring[len(population) - 1] = deepcopy(elite[0])
-
-        # TODO maybe no mutation on elite or at least ensure elite is there for fitness calc
 
         # Offload SoR to table
         fit_series = multi_eval_nb(gene_info.data_numpy, offspring, gene_info.sum)
@@ -360,7 +364,9 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # extra_returns.setdefault("elite", [])
         # extra_returns["elite"].append(list(elite[0]))
 
+        offspring[len(population) - 1] = deepcopy(elite[0])
         population = offspring
+        del offspring
 
         # Update frontier based on elite index
         # How many times the gene has been seen in the elite community
