@@ -305,12 +305,9 @@ def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, c
 
     :return: The modified population of individuals after applying crossover and mutation operations.
     """
-    # TODO: Check with one indiv for whole thing i.e. same indiv for whole population that crossover works here
     for i in range(1, pop_size, 2):
         if gene_info.rand.random() < cxpb:
-            c1, c2 = cross_meth_func(gene_info, offspring[i - 1], offspring[i])
-            offspring[i] = c1
-            offspring[i - 1] = c2
+            cross_meth_func(gene_info, offspring[i - 1], offspring[i])
 
     for i in range(pop_size):
         if gene_info.rand.random() < mutpb:
