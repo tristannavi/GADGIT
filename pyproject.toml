@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["gadgit", "gadgit.helpers"]
+
+[project]
+dependencies = ["numpy", "pandas", "numba"]
+version = "8.0.0"
+requires-python = ">= 3.10"
+readme = "README.rst"
+license = "MIT"
+keywords = ["gadgit"]
+classifiers = [
+    'Development Status :: 2 - Pre-Alpha',
+    'Intended Audience :: Developers',
+    'Natural Language :: English',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+]
+description = "Genetic Algorithm for Disease Gene Identification Toolbox"
+name = "gadgit"
+authors = [
+    { name = "Tyler Collins", email = "tk11br@sharcnet.ca" },
+    { name = "Tristan Navikevicius", email = "tnavikevicius@brocku.ca" },
+]
+maintainers = [
+    { name = "Tyler Collins", email = "tk11br@sharcnet.ca" },
+    { name = "Tristan Navikevicius", email = "tnavikevicius@brocku.ca" },
+]
+
+[project.urls]
+Repository = "https://github.com/Andesha/gadgit"
+Documentation = "https://gadgit.readthedocs.io"
