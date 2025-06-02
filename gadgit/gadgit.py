@@ -62,7 +62,7 @@ def valid_add(gene_info: GeneInfo, individual: NDArray, count: int | None = None
 
 
 def valid_remove(gene_info: GeneInfo, individual: NDArray, count: int | None = None) -> int:
-    return gene_info.rand.choice(individual, count, replace=False)
+    return gene_info.rand.choice(np.array([x for x in range(len(individual))]), count, replace=False)
 
 
 def self_correction(gene_info: GeneInfo, individual: NDArray) -> NDArray:
