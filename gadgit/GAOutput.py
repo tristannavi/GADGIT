@@ -58,10 +58,12 @@ class GAOutput:
             buf += str(ind) + ', '
         print('Genes in elite: ')
         self.genes_in_elite = [gene_info.data_frame.loc[ind, 'GeneName'] for ind in sorted(list(self.elite))]
+        self.genes_in_elite.extend(gene_info.fixed_list)
         print('Genes in elite: ', ",".join(self.genes_in_elite))
         print('Nodes exloration count: ')
         print(gene_info.frontier)
         self.frontier = gene_info.frontier
+        self.frontier[gene_info.fixed_list_ids] += ga_info.gen
         self.missed_nodes = [gene_info.data_frame.loc[ind, 'GeneName']
                              for ind, x in enumerate(gene_info.frontier) if x == 0]
         print('Nodes never explored (bad): N =', len(self.missed_nodes))

@@ -57,8 +57,10 @@ def valid_add(gene_info: GeneInfo, individual: NDArray, count: int | None = None
     :return: A randomly selected valid gene index that can be added
         to the individual's sequence.
     """
-    return gene_info.rand.choice(np.setdiff1d(np.arange(gene_info.gene_count), individual, assume_unique=True), count,
-                                 replace=False)
+    return gene_info.rand.choice(
+        np.setdiff1d(np.setdiff1d(np.arange(gene_info.gene_count), individual, assume_unique=True),
+                     gene_info.fixed_list_ids), count,
+        replace=False)
 
 
 def valid_remove(gene_info: GeneInfo, individual: NDArray, count: int | None = None) -> int:
