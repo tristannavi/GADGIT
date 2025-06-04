@@ -56,18 +56,18 @@ class GAOutput:
 
     def __str__(self):
         return (
-            f'Size: {len(self.elite)}',
-            f'Genes in elite: {",".join(self.genes_in_elite)}',
-            'Nodes exploration count:',
-            self.gene_info.frontier,
-            f'Nodes never explored (bad): N = {len(self.missed_nodes)}',
-            ', '.join(self.missed_nodes),
-            'Gene Info:',
-            self.gene_info,
-            'GA Info',
-            self.ga_info,
-            'Gene rankings including fixed genes:',
-            self.rank_pair
+            f"Size: {len(self.elite)}"
+            f"Genes in elite: {','.join(self.genes_in_elite)}"
+            "Nodes exploration count:"
+            f"{self.gene_info.frontier}"
+            f"Nodes never explored (bad): N = {len(self.missed_nodes)}"
+            f"{', '.join(self.missed_nodes)}"
+            "Gene Info:"
+            f"{self.gene_info}"
+            "GA Info"
+            f"{self.ga_info}"
+            "Gene rankings including fixed genes:"
+            f"{self.rank_pair}"
         )
 
     def __eq__(self, other) -> bool:
