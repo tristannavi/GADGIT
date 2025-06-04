@@ -6,34 +6,19 @@ from gadgit import GeneInfo, GAInfo
 
 
 class GAOutput:
-    def __init__(self, gene_info: GeneInfo, ga_info: GAInfo, hof: List[Any], **kwargs):
-        """Takes in the results of some GA and displays information based
-           on the problem definition.
+    def __init__(self, gene_info: GeneInfo, ga_info: GAInfo, elite: List[Any], **kwargs):
 
-           Must contain GeneName in dataframe.
+        self.gene_info = gene_info
+        self.ga_info = ga_info
+        self.elite = elite[0]
 
-           Parameters
-           -------
-           gene_info: GeneInfo class
-           ga_info: GAInfo class
-           hof: DEAP hall of fame object
-           """
+        self.extra = kwargs
 
-        self.params = {
-            "centrality": gene_info.obj_list,
-            "cross_method": ga_info.cross_meth,
-            "crossover_rate": ga_info.cxpb,
-            "mutation_rate": ga_info.mutpb,
-            "fixed_genes": gene_info.fixed_list,
-            "seed": gene_info.seed,
-            "ga_info": ga_info,
-            "gene_info": gene_info,
-            **kwargs
-        }
+        self.__post_run()
+        if kwargs.setdefault("print", True):
+            print(self)
 
-        self.__post_run(gene_info, ga_info, hof)
-
-    def __post_run(self, gene_info: GeneInfo, ga_info: GAInfo, hof: List[Any]):
+    def __post_run(self):
         """Takes in the results of some GA and displays information based
            on the problem definition.
 
@@ -46,34 +31,18 @@ class GAOutput:
            hof: list
            """
 
-        if 'GeneName' not in gene_info.data_frame.columns:
+        if 'GeneName' not in self.gene_info.data_frame.columns:
             raise AttributeError('Dataset must contain a "GeneName" column')
 
-        self.elite = hof[0]
-        print('Size: ', len(self.elite))
-        buf = 'Index in elite: '
+        self.genes_in_elite = [self.gene_info.data_frame.loc[ind, 'GeneName'] for ind in sorted(list(self.elite))]
+        self.genes_in_elite.extend(self.gene_info.fixed_list)
 
-        # Index is the index of the gene in the dataframe
-        for ind in sorted(list(self.elite)):
-            buf += str(ind) + ', '
-        print('Genes in elite: ')
-        self.genes_in_elite = [gene_info.data_frame.loc[ind, 'GeneName'] for ind in sorted(list(self.elite))]
-        self.genes_in_elite.extend(gene_info.fixed_list)
-        print('Genes in elite: ', ",".join(self.genes_in_elite))
-        print('Nodes exloration count: ')
-        print(gene_info.frontier)
-        self.frontier = gene_info.frontier
-        self.frontier[gene_info.fixed_list_ids] += ga_info.gen
-        self.missed_nodes = [gene_info.data_frame.loc[ind, 'GeneName']
-                             for ind, x in enumerate(gene_info.frontier) if x == 0]
-        print('Nodes never explored (bad): N =', len(self.missed_nodes))
-        print(', '.join(self.missed_nodes))
-        print('Gene Info:')
-        print(gene_info)
-        print('GA Info')
-        print(ga_info)
-        print('Gene rankings including fixed genes:')
-        rank_pair = zip(list(gene_info.data_frame['GeneName']), self.frontier)
+        self.frontier = self.gene_info.frontier
+        self.frontier[self.gene_info.fixed_list_ids] += self.ga_info.gen
+        self.missed_nodes = [self.gene_info.data_frame.loc[ind, 'GeneName']
+                             for ind, x in enumerate(self.gene_info.frontier) if x == 0]
+
+        rank_pair = zip(list(self.gene_info.data_frame['GeneName']), self.frontier)
         rank_pair = sorted(rank_pair, reverse=True, key=lambda y: y[1])
         place_list = []
         current_place = 1
@@ -84,7 +53,22 @@ class GAOutput:
             last_element = element[1]
             place_list.append(current_place)
         self.rank_pair: List[Tuple[str, int]] = list(zip([x[0] for x in rank_pair], place_list))
-        print(self.rank_pair)
+
+    def __str__(self):
+        return (
+            f'Size: {len(self.elite)}',
+            f'Genes in elite: {",".join(self.genes_in_elite)}',
+            'Nodes exploration count:',
+            self.gene_info.frontier,
+            f'Nodes never explored (bad): N = {len(self.missed_nodes)}',
+            ', '.join(self.missed_nodes),
+            'Gene Info:',
+            self.gene_info,
+            'GA Info',
+            self.ga_info,
+            'Gene rankings including fixed genes:',
+            self.rank_pair
+        )
 
     def __eq__(self, other) -> bool:
         return (self.rank_pair == other.rank_pair and
@@ -100,7 +84,7 @@ class GAOutput:
         missed_nodes_df = pd.DataFrame([genes, missed_nodes_values]).T.set_index(0)
         elite_nodes_values = [True if gene in self.genes_in_elite else False for gene in genes]
         elite_nodes_df = pd.DataFrame([genes, elite_nodes_values]).T.set_index(0)
-        fixed_nodes = [True if gene in self.params['fixed_genes'] else False for gene in genes]
+        fixed_nodes = [True if gene in self.gene_info.fixed_list else False for gene in genes]
         fixed_nodes_df = pd.DataFrame([genes, fixed_nodes]).T.set_index(0)
         output = output.join(missed_nodes_df.rename(columns={1: "Missed"}))
         output = output.join(elite_nodes_df.rename(columns={1: "Elite"}))
