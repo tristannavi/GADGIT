@@ -55,20 +55,20 @@ class GAOutput:
         self.rank_pair: List[Tuple[str, int]] = list(zip([x[0] for x in rank_pair], place_list))
 
     def __str__(self):
-        return (
-            f"Size: {len(self.elite)}"
-            f"Genes in elite: {','.join(self.genes_in_elite)}"
-            "Nodes exploration count:"
-            f"{self.gene_info.frontier}"
-            f"Nodes never explored (bad): N = {len(self.missed_nodes)}"
-            f"{', '.join(self.missed_nodes)}"
-            "Gene Info:"
-            f"{self.gene_info}"
-            "GA Info"
-            f"{self.ga_info}"
-            "Gene rankings including fixed genes:"
-            f"{self.rank_pair}"
-        )
+        return ""
+# f"""Size: {len(self.elite)}
+# Genes in elite: {','.join(self.genes_in_elite)}
+# Nodes exploration count:
+# {self.gene_info.frontier}
+# Nodes never explored (bad): N = {len(self.missed_nodes)}
+# {', '.join(self.missed_nodes)}
+# Gene Info:
+# {self.gene_info}
+# GA Info
+# {self.ga_info}
+# Gene rankings including fixed genes:
+# {self.rank_pair}
+# """
 
     def __eq__(self, other) -> bool:
         return (self.rank_pair == other.rank_pair and
