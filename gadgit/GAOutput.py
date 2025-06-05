@@ -6,16 +6,16 @@ from gadgit import GeneInfo, GAInfo
 
 
 class GAOutput:
-    def __init__(self, gene_info: GeneInfo, ga_info: GAInfo, elite: List[Any], **kwargs):
+    def __init__(self, gene_info: GeneInfo, ga_info: GAInfo, elite: List[Any], verbose: bool = False, **kwargs):
 
         self.gene_info = gene_info
         self.ga_info = ga_info
-        self.elite = elite[0]
+        self.elite = list(elite[0])
 
         self.extra = kwargs
 
         self.__post_run()
-        if kwargs.setdefault("print", True):
+        if verbose:
             print(self)
 
     def __post_run(self):
@@ -40,7 +40,7 @@ class GAOutput:
         self.frontier = self.gene_info.frontier
         self.frontier[self.gene_info.fixed_list_ids] += self.ga_info.gen
         self.missed_nodes = [self.gene_info.data_frame.loc[ind, 'GeneName']
-                             for ind, x in enumerate(self.gene_info.frontier) if x == 0]
+                             for ind, x in enumerate(self.frontier) if x == 0]
 
         rank_pair = zip(list(self.gene_info.data_frame['GeneName']), self.frontier)
         rank_pair = sorted(rank_pair, reverse=True, key=lambda y: y[1])
