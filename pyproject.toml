@@ -35,3 +35,5 @@ maintainers = [
 [project.urls]
 Repository = "https://github.com/Andesha/gadgit"
 Documentation = "https://gadgit.readthedocs.io"
+
+[tool.setuptools_scm]
