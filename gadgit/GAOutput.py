@@ -6,7 +6,39 @@ from gadgit import GeneInfo, GAInfo
 
 
 class GAOutput:
-    def __init__(self, gene_info: GeneInfo, ga_info: GAInfo, elite: List[Any], verbose: bool = False, **kwargs):
+    """
+    This class represents the output of a Genetic Algorithm (GA) run, including detailed
+    information about the genes involved, the elite members, and their rankings. It
+    processes and presents results based on problem-specific definitions and data.
+
+    The class retrieves and processes the results of the GA execution, identifies
+    explored and unexplored genes, computes rankings considering fixed genes,
+    and allows exporting data to a structured DataFrame. It ensures that the input
+    dataset contains required fields for processing and provides a comparison mechanism
+    for instances.
+
+    :ivar gene_info: Input data and metadata related to genes used in the GA.
+    :ivar ga_info: Metadata and processing details for the GA execution.
+    :ivar elite: List of indices representing the elite members of the GA run.
+    :ivar extra: Additional keyword arguments supplied to the instance.
+    :ivar genes_in_elite: List of gene names corresponding to the elite members.
+    :ivar frontier: Counter of how often nodes were explored during the GA execution.
+    :ivar missed_nodes: List of gene names that were never explored in the GA.
+    :ivar rank_pair: Sorted list of tuples containing gene names and their rankings.
+    """
+
+    def __init__(self, gene_info: GeneInfo, ga_info: GAInfo, elite: List[Any], verbose: bool = True, **kwargs):
+        """
+        Initializes an instance of the class responsible for managing genetic algorithm information
+        and supplemental gene data. This constructor sets up elite genes, additional configurations,
+        and optional verbosity for logging during initialization.
+
+        :param gene_info: Contains the information related to the genes.
+        :param ga_info: Contains the information related to the genetic algorithm.
+        :param elite: List of the elite individuals required for the genetic algorithm.
+        :param verbose: Flag to determine if verbose output logs should be printed during initialization.
+        :param kwargs: Additional keyword arguments for extra configurations.
+        """
 
         self.gene_info = gene_info
         self.ga_info = ga_info
@@ -14,22 +46,18 @@ class GAOutput:
 
         self.extra = kwargs
 
-        self.__post_run()
+        self._post_run()
         if verbose:
             print(self)
 
-    def __post_run(self):
-        """Takes in the results of some GA and displays information based
-           on the problem definition.
+    def _post_run(self) -> None:
+        """
+        Executes the final processing steps after data analysis and genetic algorithm execution. This
+        method prepares the ranked list of genes, updates the frontier data to reflect the number
+        of generations, and identifies nodes that were missed in the analysis.
 
-           Must contain GeneName in dataframe.
-
-           Parameters
-           -------
-           gene_info: GeneInfo class
-           ga_info: GAInfo class
-           hof: list
-           """
+        :raises AttributeError: If the 'GeneName' column is missing from the dataset.
+        """
 
         if 'GeneName' not in self.gene_info.data_frame.columns:
             raise AttributeError('Dataset must contain a "GeneName" column')
@@ -54,21 +82,20 @@ class GAOutput:
             place_list.append(current_place)
         self.rank_pair: List[Tuple[str, int]] = list(zip([x[0] for x in rank_pair], place_list))
 
-    def __str__(self):
-        return ""
-# f"""Size: {len(self.elite)}
-# Genes in elite: {','.join(self.genes_in_elite)}
-# Nodes exploration count:
-# {self.gene_info.frontier}
-# Nodes never explored (bad): N = {len(self.missed_nodes)}
-# {', '.join(self.missed_nodes)}
-# Gene Info:
-# {self.gene_info}
-# GA Info
-# {self.ga_info}
-# Gene rankings including fixed genes:
-# {self.rank_pair}
-# """
+    def __str__(self) -> str:
+        return (
+            f"Genes in elite: {', '.join(self.genes_in_elite)}\n"
+            f"Nodes exploration count:\n"
+            f"{self.gene_info.frontier}\n"
+            f"Nodes never explored (bad): N = {len(self.missed_nodes)}\n"
+            f"{', '.join(self.missed_nodes)}\n"
+            f"Gene Info:\n"
+            f"{self.gene_info}\n"
+            f"GA Info:\n"
+            f"{self.ga_info}\n"
+            f"Gene rankings including fixed genes:\n"
+            f"{self.rank_pair}\n"
+        )
 
     def __eq__(self, other) -> bool:
         return (self.rank_pair == other.rank_pair and
@@ -77,7 +104,7 @@ class GAOutput:
                 self.elite == other.elite and
                 self.genes_in_elite == other.genes_in_elite)
 
-    def to_df(self):
+    def to_df(self) -> pd.DataFrame:
         output = pd.DataFrame([*self.rank_pair]).set_index(0).rename(columns={1: "Rank"})
         genes = [gene[0] for gene in self.rank_pair]
         missed_nodes_values = [True if gene in self.missed_nodes else False for gene in genes]
