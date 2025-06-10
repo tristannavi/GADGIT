@@ -252,6 +252,10 @@ def _dense_rank(a: NDArray) -> NDArray:
     return ranks
 
 
+# TODO: Sum of ranks not sum of value?
+#  - As in no sum of value anywhere at all, even with multiple objectives
+#  - Email Sheridan soon
+
 @numba.njit
 def multi_eval_nb(data: NDArray,
                   population: NDArray,
@@ -346,7 +350,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
             print(gen)
         # Select the next generation individuals to breed
         tournament_max = kwargs.setdefault("tournament_max", True)
-        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series, max=tournament_max)
+        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series,
+                                         max=tournament_max)
 
         offspring = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population) - 1)
 
@@ -365,9 +370,15 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # current_elite_fitness = fit_series[np.where((offspring == elite[0]).all(1))[0][0]]
         # elite = [deepcopy(offspring[fit_series.argmax()]) if best_current >= current_elite_fitness else elite[0]]
         if kwargs.setdefault("elite_max", True):
-            elite = [deepcopy(offspring[fit_series.argmax()])]
+            # elite = [deepcopy(offspring[fit_series.argmax()])]
+            best_current = fit_series.argmax()
+            current_elite_fitness = fit_series[np.where((offspring == elite[0]).all(1))[0][0]]
+            elite = [deepcopy(offspring[fit_series.argmax()]) if best_current >= current_elite_fitness else elite[0]]
         else:
-            elite = [deepcopy(offspring[fit_series.argmin()])]
+            # elite = [deepcopy(offspring[fit_series.argmin()])]
+            best_current = fit_series.argmin()
+            current_elite_fitness = fit_series[np.where((offspring == elite[0]).all(1))[0][0]]
+            elite = [deepcopy(offspring[fit_series.argmin()]) if best_current <= current_elite_fitness else elite[0]]
         extra_returns.setdefault("elite", [])
         extra_returns["elite"].append(list(elite[0]))
 
