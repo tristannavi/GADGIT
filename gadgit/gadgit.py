@@ -3,6 +3,7 @@ from copy import deepcopy
 import numba
 
 import numpy as np
+import pandas as pd
 from numpy import copy
 from numpy.typing import NDArray
 
@@ -252,6 +253,52 @@ def _dense_rank(a: NDArray) -> NDArray:
     return ranks
 
 
+def single_eval(objective: str, data_frame: pd.DataFrame, individual: list[int]):
+    """ Single objective summation of the centrality of a particular
+    frame's chosen column.
+
+    Due to gene_info.obj_list obviously accepting a list for the purposes of
+    extending to MOP, in the case of this single_eval, the head of the list
+    is treated as the 'single' objective.
+
+    Note: does not correctly calculate the frontier.
+    """
+
+    fit_col = objective
+    fit_sum = 0.0
+    for item in individual:
+        fit_sum += data_frame.loc[item, fit_col]
+        # gene_info.frontier[item] += 1
+
+    return fit_sum,
+
+
+def multi_eval(gene_info, population):
+    """Helper function to implement the SoR table operations."""
+    # Build raw objective information
+    all_rows = []
+    for indiv in population:
+        indiv_slice = gene_info.data_frame.loc[list(indiv)]
+        indiv_sums = [indiv_slice[obj].sum() for obj in gene_info.obj_list]
+        all_rows.append(indiv_sums)
+    raw_frame = pd.DataFrame(all_rows, columns=gene_info.obj_list)
+
+    # Ranking procedure
+    sor = pd.DataFrame()
+    obj_log_info = {}
+    for obj in raw_frame.columns:
+        obj_log_info[f'new_gen_max_{obj}'] = raw_frame[obj].max()
+        obj_log_info[f'new_gen_mean_{obj}'] = raw_frame[obj].mean()
+        rank_series = np.argsort(raw_frame[obj])
+        swap_index = pd.Series(dict((v, k)
+                                    for k, v in rank_series.items()))
+        append_ranks = swap_index.sort_index()
+        sor[obj + '_rank_norm'] = append_ranks / append_ranks.max()
+
+    sor['sum'] = sor[list(sor.columns)].sum(axis=1)
+    return sor['sum'].rank(method='first'), obj_log_info
+
+
 # TODO: Sum of ranks not sum of value?
 #  - As in no sum of value anywhere at all, even with multiple objectives
 #  - Email Sheridan soon
@@ -336,10 +383,20 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     # Offload SoR to table
     fit_series: NDArray
 
-    fitness_max = kwargs.setdefault("fitness_max", False)
+    if kwargs["fitness_max"] != True and kwargs["fitness_max"] != False:
+        raise AttributeError("fitness_max must be True or False")
+
+    if kwargs["elite_max"] != "1" and kwargs["elite_max"] != "2" and kwargs["elite_max"] != "3" and kwargs[
+        "elite_max"] != "4":
+        raise AttributeError("elite_max must be 1, 2, 3, or 4")
+
+    if kwargs["tournament_max"] != True and kwargs["tournament_max"] != False:
+        raise AttributeError("tournament_max must be True or False")
+
+    fitness_max = kwargs["fitness_max"]
     fit_series = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum, maximize=fitness_max)
 
-    if kwargs.setdefault("elite_max", True):
+    if kwargs["elite_max"]:
         elite = [deepcopy(population[fit_series.argmax()])]
     else:
         elite = [deepcopy(population[fit_series.argmin()])]
@@ -349,7 +406,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         if gen % 10 == 0:
             print(gen)
         # Select the next generation individuals to breed
-        tournament_max = kwargs.setdefault("tournament_max", True)
+        tournament_max = kwargs["tournament_max"]
         breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series,
                                          max=tournament_max)
 
@@ -369,18 +426,25 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # best_current = fit_series.argmax()
         # current_elite_fitness = fit_series[np.where((offspring == elite[0]).all(1))[0][0]]
         # elite = [deepcopy(offspring[fit_series.argmax()]) if best_current >= current_elite_fitness else elite[0]]
-        if kwargs.setdefault("elite_max", True):
-            # elite = [deepcopy(offspring[fit_series.argmax()])]
+        if kwargs["elite_max"] == "1":
+            elite = [deepcopy(offspring[fit_series.argmax()])]
+        elif kwargs["elite_max"] == "2":
             best_current = fit_series.argmax()
             current_elite_fitness = fit_series[np.where((offspring == elite[0]).all(1))[0][0]]
             elite = [deepcopy(offspring[fit_series.argmax()]) if best_current >= current_elite_fitness else elite[0]]
-        else:
-            # elite = [deepcopy(offspring[fit_series.argmin()])]
+        elif kwargs["elite_max"] == "3":
+            elite = [deepcopy(offspring[fit_series.argmin()])]
+        elif kwargs["elite_max"] == "4":
             best_current = fit_series.argmin()
             current_elite_fitness = fit_series[np.where((offspring == elite[0]).all(1))[0][0]]
             elite = [deepcopy(offspring[fit_series.argmin()]) if best_current <= current_elite_fitness else elite[0]]
+        else:
+            raise AttributeError
+
         extra_returns.setdefault("elite", [])
-        extra_returns["elite"].append(list(elite[0]))
+        elite_list = list(elite[0])
+        if elite_list not in extra_returns["elite"]:
+            extra_returns["elite"].append(elite_list)
 
         # offspring[len(population) - 1] = deepcopy(elite[0])
         population = offspring
