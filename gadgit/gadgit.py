@@ -287,7 +287,7 @@ def multi_eval_nb(data: NDArray,
     final_ranks = _dense_rank(obj_sums)
 
     if maximize:
-        return len(population) - final_ranks
+        return np.max(final_ranks) + 1 - final_ranks
     else:
         return final_ranks
 
