@@ -1,13 +1,11 @@
 from collections.abc import Callable
 from copy import deepcopy
 import numba
-
 import numpy as np
-import pandas as pd
 from numpy import copy
 from numpy.typing import NDArray
-
-from gadgit import GeneInfo, GAInfo
+from gadgit.GeneInfo import GeneInfo
+from gadgit.GAInfo import GAInfo
 
 
 def cx_SDB(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray):
@@ -253,52 +251,6 @@ def _dense_rank(a: NDArray) -> NDArray:
     return ranks
 
 
-def single_eval(objective: str, data_frame: pd.DataFrame, individual: list[int]):
-    """ Single objective summation of the centrality of a particular
-    frame's chosen column.
-
-    Due to gene_info.obj_list obviously accepting a list for the purposes of
-    extending to MOP, in the case of this single_eval, the head of the list
-    is treated as the 'single' objective.
-
-    Note: does not correctly calculate the frontier.
-    """
-
-    fit_col = objective
-    fit_sum = 0.0
-    for item in individual:
-        fit_sum += data_frame.loc[item, fit_col]
-        # gene_info.frontier[item] += 1
-
-    return fit_sum,
-
-
-def multi_eval(gene_info, population):
-    """Helper function to implement the SoR table operations."""
-    # Build raw objective information
-    all_rows = []
-    for indiv in population:
-        indiv_slice = gene_info.data_frame.loc[list(indiv)]
-        indiv_sums = [indiv_slice[obj].sum() for obj in gene_info.obj_list]
-        all_rows.append(indiv_sums)
-    raw_frame = pd.DataFrame(all_rows, columns=gene_info.obj_list)
-
-    # Ranking procedure
-    sor = pd.DataFrame()
-    obj_log_info = {}
-    for obj in raw_frame.columns:
-        obj_log_info[f'new_gen_max_{obj}'] = raw_frame[obj].max()
-        obj_log_info[f'new_gen_mean_{obj}'] = raw_frame[obj].mean()
-        rank_series = np.argsort(raw_frame[obj])
-        swap_index = pd.Series(dict((v, k)
-                                    for k, v in rank_series.items()))
-        append_ranks = swap_index.sort_index()
-        sor[obj + '_rank_norm'] = append_ranks / append_ranks.max()
-
-    sor['sum'] = sor[list(sor.columns)].sum(axis=1)
-    return sor['sum'].rank(method='first'), obj_log_info
-
-
 # TODO: Sum of ranks not sum of value?
 #  - As in no sum of value anywhere at all, even with multiple objectives
 #  - Email Sheridan soon
@@ -307,7 +259,7 @@ def multi_eval(gene_info, population):
 def multi_eval_nb(data: NDArray,
                   population: NDArray,
                   fixed: NDArray,
-                  maximize: np.bool = False
+                  maximize: bool = False
                   ) -> NDArray:
     pop_size, genome_len = population.shape
     num_objs = data.shape[1]
@@ -370,7 +322,7 @@ def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, c
 
 
 def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, cxpb: float, mutpb: float, ngen: int,
-                    cross_meth: Callable, **kwargs):
+                    cross_meth: Callable, kwargs):
     """
     This function runs an EA using the Sum of Ranks (SoR) fitness methodology.
 
