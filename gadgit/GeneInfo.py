@@ -59,7 +59,7 @@ class GeneInfo:
         self.com_size = com_size - len(fixed_list)
         self.sum = self.data_frame[self.data_frame["GeneName"].isin(self.fixed_list)][
             self.obj_list].sum().to_numpy()
-        self.frontier = np.zeros(shape=self.gene_count)  # [0 for x in range(self.gene_count)]
+        self.frontier = np.zeros(shape=self.gene_count, dtype=np.int64)  # [0 for x in range(self.gene_count)]
         self.seed = seed
         self.rand = np.random.default_rng(PCG64DXSM(seed))
 
