@@ -136,6 +136,7 @@ def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
 
 
 def indiv_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
+def population_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
     """
     Generate a population of individuals based on gene information and population size.
 
@@ -153,14 +154,11 @@ def indiv_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
         individual and each column is a gene ID.
     """
     population = np.zeros(shape=(pop_size, gene_info.com_size), dtype=np.int64)
-    num_choices = gene_info.com_size  # - len(gene_info.fixed_list)
     valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_ids))
 
     for i in range(pop_size):
-        # base_indiv = np.zeros(shape=gene_info.com_size)#np.pad(gene_info.fixed_list_ids, (0, num_choices), 'constant')
-        base_indiv = gene_info.rand.choice(valid_choices, num_choices, replace=False)
-        # gene_info.rand.shuffle(base_indiv)
-        population[i] = base_indiv
+        individual = gene_info.rand.choice(valid_choices, gene_info.com_size, replace=False)
+        population[i] = individual
 
     return population
 
@@ -228,7 +226,7 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
     else:
         raise AttributeError('Invalid crossover string specified')
 
-    pop = indiv_builder(gene_info, ga_info.pop)
+    pop = population_builder(gene_info, ga_info.pop)
 
     pop, _, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
                                                  cross_meth, kwargs=kwargs)
