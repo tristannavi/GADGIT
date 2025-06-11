@@ -235,53 +235,81 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
 
 
 @numba.njit
-def _dense_rank(a: NDArray) -> NDArray:
-    # returns 1-based dense ranks of 1D array a
-    unique = np.unique(a)
-    ranks = np.empty(a.shape, np.int64)
-    for i in range(a.size):
-        # linear search over unique (ok for moderate sizes)
-        ai = a[i]
+def _rank(array: NDArray) -> NDArray:
+    """
+    Calculate 1-based dense ranks of elements in a 1D array.
+
+    The function computes the ranks of elements in the input array such that
+    equal elements receive the same rank, and ranks are assigned consecutively
+    from 1 to the number of unique elements.
+
+    The implementation uses a linear search over the unique elements of
+    the input array for each element, making it suitable for moderate-sized
+    arrays.
+
+    :param array: The input 1D array for which ranks are to be computed.
+                  It should be a numpy array.
+    :return: A 1D numpy array containing the 1-based dense ranks of the
+             elements in the input array. The length of the result array
+             matches the length of the input array.
+    """
+    unique = np.unique(array)
+    ranks = np.zeros(array.shape, np.int64)
+    for i in range(array.size):
         for j in range(unique.size):
-            if ai == unique[j]:
+            if array[i] == unique[j]:
                 ranks[i] = j + 1
                 break
     return ranks
 
 
-# TODO: Sum of ranks not sum of value?
-#  - As in no sum of value anywhere at all, even with multiple objectives
-#  - Email Sheridan soon
-
 @numba.njit
 def multi_eval_nb(data: NDArray,
                   population: NDArray,
                   fixed: NDArray,
-                  maximize: bool = False
-                  ) -> NDArray:
-    pop_size, genome_len = population.shape
-    num_objs = data.shape[1]
+                  maximize: bool = False) -> NDArray:
+    """
+    Evaluates and ranks a population based on given data, a fixed vector, and whether the ranking is
+    maximization-oriented. The evaluation involves building raw sums for selected genes, calculating
+    normalized ranks for each objective, and combining the objectives' scores into final ranks.
 
-    all_rows = np.zeros((pop_size, num_objs))
+    :param data: A Numpy array where each row corresponds to an individual centrality vector, and
+        each column represents an objective.
+    :param population: A Numpy 2D array where each row represents an individual in the population
+        and columns correspond to the genes (selected indices into `data` for evaluation).
+    :param fixed: A Numpy 1D array containing fixed values to add to the objective scores of
+        each individual. This array must have a length equal to the number of objectives.
+    :param maximize: A boolean indicating whether the ranking should interpret higher scores as
+        better. If True, the ranking is reversed such that higher scores are better; if False,
+        lower scores are better.
+    :return: A Numpy 1D array where each value corresponds to the rank of the respective individual
+        in the input `population`. Ranks are calculated based on combined normalized scores of
+        all objectives. Ranks are in ascending order if `maximize` is False, and descending
+        order otherwise.
+    """
+    pop_size, com_size = population.shape
+    num_objs = data.shape[1]
+    all_rows = np.zeros(shape=(pop_size, num_objs))
+
     # build raw sums
-    for i in range(pop_size):
-        for g in range(genome_len):
-            idx = population[i, g]
-            for o in range(num_objs):
-                all_rows[i, o] += data[idx, o]
-                all_rows[i, o] += fixed[o]
+    for individual_index in range(pop_size):
+        for gene in range(com_size):
+            centrality_index = population[individual_index, gene]
+            for objective in range(num_objs):
+                all_rows[individual_index, objective] += data[centrality_index, objective]
+                all_rows[individual_index, objective] += fixed[objective]
 
     # prepare output array
     sor = np.zeros_like(all_rows)
-    for o in range(num_objs):
-        ranks = _dense_rank(all_rows[:, o])
-        max_r = ranks.max()
-        for i in range(pop_size):
-            sor[i, o] = ranks[i] / max_r
+    for objective in range(num_objs):
+        ranks = _rank(all_rows[:, objective])
+        max_rank = ranks.max()
+        for individual_index in range(pop_size):
+            sor[individual_index, objective] = ranks[individual_index] / max_rank
 
     # sum over objectives and final rank
     obj_sums = np.sum(sor, axis=1)
-    final_ranks = _dense_rank(obj_sums)
+    final_ranks = _rank(obj_sums)
 
     if maximize:
         return np.max(final_ranks) + 1 - final_ranks
