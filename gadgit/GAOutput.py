@@ -66,7 +66,7 @@ class GAOutput:
         self.genes_in_elite.extend(self.gene_info.fixed_list)
 
         self.frontier = self.gene_info.frontier
-        self.frontier[self.gene_info.fixed_list_ids] += self.ga_info.gen
+        self.frontier[self.gene_info.fixed_list_nums] += self.ga_info.gen
         self.missed_nodes = [self.gene_info.data_frame.loc[ind, 'GeneName']
                              for ind, x in enumerate(self.frontier) if x == 0]
 

@@ -47,7 +47,7 @@ class GeneInfo:
         self.gene_count = self.data_frame.shape[0]
         self.obj_list = obj_list
         self.fixed_list = fixed_list
-        self.fixed_list_ids = np.array(self.data_frame[
+        self.fixed_list_nums = np.array(self.data_frame[
                                            self.data_frame['GeneName'].isin(fixed_list)].index.to_list())
 
         # Reorder the dataframe so that the fixed genes appear first

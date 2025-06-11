@@ -58,7 +58,7 @@ def valid_add(gene_info: GeneInfo, individual: NDArray, count: int | None = None
     """
     return gene_info.rand.choice(
         np.setdiff1d(np.setdiff1d(np.arange(gene_info.gene_count), individual, assume_unique=True),
-                     gene_info.fixed_list_ids), count,
+                     gene_info.fixed_list_nums), count,
         replace=False)
 
 
@@ -154,7 +154,7 @@ def population_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
         individual and each column is a gene ID.
     """
     population = np.zeros(shape=(pop_size, gene_info.com_size), dtype=np.int64)
-    valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_ids))
+    valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_nums))
 
     for i in range(pop_size):
         individual = gene_info.rand.choice(valid_choices, gene_info.com_size, replace=False)
@@ -291,15 +291,16 @@ def multi_eval_nb(data: NDArray,
     num_objs = data.shape[1]
     all_rows = np.zeros(shape=(pop_size, num_objs))
 
-    # build raw sums
+    # Sum the centralities for every gene in each individual for each objective
     for gene in range(com_size):
         centrality_indices = population[:, gene]
         all_rows += data[centrality_indices]
 
+    # Add the centrality measures of the fixed genes
     for objective in range(num_objs):
         all_rows[:, objective] += fixed[objective]
 
-    # prepare output array
+    # Rank each individual based on the sum of their centralities
     sor = np.zeros_like(all_rows)
     for objective in range(num_objs):
         ranks = _rank(all_rows[:, objective])
@@ -307,7 +308,7 @@ def multi_eval_nb(data: NDArray,
         for individual_index in range(pop_size):
             sor[individual_index, objective] = ranks[individual_index] / max_rank
 
-    # sum over objectives and final rank
+    # Sum all objective ranks for each individual and then rank the individuals based on those sums
     obj_sums = np.sum(sor, axis=1)
     final_ranks = _rank(obj_sums)
 
