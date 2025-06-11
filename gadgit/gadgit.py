@@ -292,12 +292,12 @@ def multi_eval_nb(data: NDArray,
     all_rows = np.zeros(shape=(pop_size, num_objs))
 
     # build raw sums
-    for individual_index in range(pop_size):
-        for gene in range(com_size):
-            centrality_index = population[individual_index, gene]
-            for objective in range(num_objs):
-                all_rows[individual_index, objective] += data[centrality_index, objective]
-                all_rows[individual_index, objective] += fixed[objective]
+    for gene in range(com_size):
+        centrality_indices = population[:, gene]
+        all_rows += data[centrality_indices]
+
+    for objective in range(num_objs):
+        all_rows[:, objective] += fixed[objective]
 
     # prepare output array
     sor = np.zeros_like(all_rows)
