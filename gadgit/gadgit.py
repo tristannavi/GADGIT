@@ -135,7 +135,6 @@ def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
     return individual
 
 
-def indiv_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
 def population_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
     """
     Generate a population of individuals based on gene information and population size.
