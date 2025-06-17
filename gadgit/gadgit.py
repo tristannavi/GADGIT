@@ -9,21 +9,26 @@ from gadgit.GAInfo import GAInfo
 
 
 def cx_SDB(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray):
-    """SDB Crossover
+    """
+    Performs the Safe Dealer Based crossover
+    algorithm operator between two parent individuals represented by their
+    genetic code. The CX-SDB operator exchanges genetic information between the
+    two parents by identifying common genes, separating unique genes, shuffling
+    the unique genes, and recombining them into the offspring. It ensures a mix
+    of genetic material while keeping consistency with the genetic structure.
 
-    Computes the intersection and asserts that after the intersection,
-    the amount of genes left over to 'deal' between two new individuals
-    is even.
-
-    Clears the set structures of their old information, updates with the
-    intersection, and lastly hands out half of the shuffled dealer to each
-    indiv.
-
-    ind1 and ind2 and kept as objects since they inherit from set, but have
-    additional properties.
-
-    Note that this process is not destructive to the fixed genes inside of the
-    individuals.
+    :param gene_info: An object that provides methods and properties for handling
+        genetic operations, including a random number generator for shuffling
+        operations.
+    :param ind1: An array representing the first individual. It serves as the
+        first parent and is modified in place to reflect one of the offspring of
+        the crossover.
+    :param ind2: An array representing the second individual. It serves as the
+        second parent and is modified in place to reflect one of the offspring of
+        the crossover.
+    :return: A tuple containing two arrays. The first array corresponds to the
+        modified version of `ind1` after the crossover, and the second array
+        corresponds to the modified version of `ind2`.
     """
 
     # Build dealer
@@ -266,7 +271,7 @@ def _rank(array: NDArray) -> NDArray:
 def multi_eval_nb(data: NDArray,
                   population: NDArray,
                   fixed: NDArray,
-                  maximize: bool = False) -> NDArray:
+                  minimize: bool = False) -> tuple[NDArray, NDArray, NDArray, NDArray]:
     """
     Evaluates and ranks a population based on given data, a fixed vector, and whether the ranking is
     maximization-oriented. The evaluation involves building raw sums for selected genes, calculating
@@ -278,7 +283,7 @@ def multi_eval_nb(data: NDArray,
         and columns correspond to the genes (selected indices into `data` for evaluation).
     :param fixed: A Numpy 1D array containing fixed values to add to the objective scores of
         each individual. This array must have a length equal to the number of objectives.
-    :param maximize: A boolean indicating whether the ranking should interpret higher scores as
+    :param minimize: A boolean indicating whether the ranking should interpret higher scores as
         better. If True, the ranking is reversed such that higher scores are better; if False,
         lower scores are better.
     :return: A Numpy 1D array where each value corresponds to the rank of the respective individual
@@ -289,6 +294,9 @@ def multi_eval_nb(data: NDArray,
     pop_size, com_size = population.shape
     num_objs = data.shape[1]
     all_rows = np.zeros(shape=(pop_size, num_objs))
+    max_values = np.zeros(num_objs)
+    avg_values = np.zeros(num_objs)
+    min_values = np.zeros(num_objs)
 
     # Sum the centralities for every gene in each individual for each objective
     for gene in range(com_size):
@@ -298,6 +306,9 @@ def multi_eval_nb(data: NDArray,
     # Add the centrality measures of the fixed genes
     for objective in range(num_objs):
         all_rows[:, objective] += fixed[objective]
+        max_values[objective] = all_rows[:, objective].max()
+        avg_values[objective] = all_rows[:, objective].mean()
+        min_values[objective] = all_rows[:, objective].min()
 
     # Rank each individual based on the sum of their centralities
     sor = np.zeros_like(all_rows)
@@ -311,10 +322,10 @@ def multi_eval_nb(data: NDArray,
     obj_sums = np.sum(sor, axis=1)
     final_ranks = _rank(obj_sums)
 
-    if maximize:
-        return np.max(final_ranks) + 1 - final_ranks
+    if not minimize:
+        return np.max(final_ranks) + 1 - final_ranks, max_values, avg_values, min_values
     else:
-        return final_ranks
+        return final_ranks, max_values, avg_values, min_values
 
 
 def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
@@ -361,40 +372,46 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     # Offload SoR to table
     fit_series: NDArray
 
-    if kwargs["fitness_max"] != True and kwargs["fitness_max"] != False:
-        raise AttributeError("fitness_max must be True or False")
+    # if kwargs["fitness_max"] != True and kwargs["fitness_max"] != False:
+    #     raise AttributeError("fitness_max must be True or False")
 
-    if kwargs["elite_max"] != "1" and kwargs["elite_max"] != "2" and kwargs["elite_max"] != "3" and kwargs[
-        "elite_max"] != "4":
-        raise AttributeError("elite_max must be 1, 2, 3, or 4")
+    if kwargs["elite_max"] != "1" and kwargs["elite_max"] != "2":
+        raise AttributeError("elite_max must be 1, 2")
 
-    if kwargs["tournament_max"] != True and kwargs["tournament_max"] != False:
-        raise AttributeError("tournament_max must be True or False")
+    # if kwargs["tournament_max"] != True and kwargs["tournament_max"] != False:
+    #     raise AttributeError("tournament_max must be True or False")
 
-    fitness_max = kwargs["fitness_max"]
-    fit_series = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum, maximize=fitness_max)
+    # fitness_max = kwargs["fitness_max"]
+    fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum)
+    print("Gen:", 0, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
 
-    if kwargs["elite_max"]:
-        elite = [deepcopy(population[fit_series.argmax()])]
-    else:
-        elite = [deepcopy(population[fit_series.argmin()])]
+    # if kwargs["elite_max"]:
+    #     elite = [deepcopy(population[fit_series.argmax()])]
+    # else:
+    elite = [deepcopy(population[fit_series.argmin()])]
+    extra_returns.setdefault("max_fitness", [])
+    extra_returns["max_fitness"].append(max_fitness[0])
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
-        if gen % 10 == 0:
-            print(gen)
+        # if gen % 10 == 0:
+        #     print(gen)
         # Select the next generation individuals to breed
-        tournament_max = kwargs["tournament_max"]
+        # tournament_max = kwargs["tournament_max"]
         breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series,
-                                         max=tournament_max)
+                                         max=False)
 
         offspring = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population) - 1)
 
         # Strict elitism
+        # print(offspring[len(population) - 1])
         offspring[len(population) - 1] = deepcopy(elite[0])
+        # print(offspring[len(population) - 1])
 
         # Offload SoR to table
-        fit_series = multi_eval_nb(gene_info.data_numpy, offspring, gene_info.sum, maximize=fitness_max)
+        fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, offspring,
+                                                                          gene_info.sum)
+        print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
@@ -404,25 +421,33 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # best_current = fit_series.argmax()
         # current_elite_fitness = fit_series[np.where((offspring == elite[0]).all(1))[0][0]]
         # elite = [deepcopy(offspring[fit_series.argmax()]) if best_current >= current_elite_fitness else elite[0]]
+        # if kwargs["elite_max"] == "1":
+        #     elite = [deepcopy(offspring[fit_series.argmax()])]
+        # elif kwargs["elite_max"] == "2":
+        #     best_current = fit_series.argmax()
+        #     current_elite_fitness = fit_series[np.where((offspring == elite[0]).all(1))[0][0]]
+        #     elite = [deepcopy(offspring[fit_series.argmax()]) if best_current >= current_elite_fitness else elite[0]]
         if kwargs["elite_max"] == "1":
-            elite = [deepcopy(offspring[fit_series.argmax()])]
-        elif kwargs["elite_max"] == "2":
-            best_current = fit_series.argmax()
-            current_elite_fitness = fit_series[np.where((offspring == elite[0]).all(1))[0][0]]
-            elite = [deepcopy(offspring[fit_series.argmax()]) if best_current >= current_elite_fitness else elite[0]]
-        elif kwargs["elite_max"] == "3":
+            # print(fit_series[np.where((offspring == elite[0]).all(1))])
+            # print(fit_series[len(population) - 1])
             elite = [deepcopy(offspring[fit_series.argmin()])]
-        elif kwargs["elite_max"] == "4":
+        elif kwargs["elite_max"] == "2":
             best_current = fit_series.argmin()
             current_elite_fitness = fit_series[np.where((offspring == elite[0]).all(1))[0][0]]
-            elite = [deepcopy(offspring[fit_series.argmin()]) if best_current <= current_elite_fitness else elite[0]]
+            elite = [deepcopy(offspring[fit_series.argmin()]) if best_current < current_elite_fitness else elite[0]]
         else:
+            raise AttributeError
+
+        if len(elite) != 1:
             raise AttributeError
 
         extra_returns.setdefault("elite", [])
         elite_list = list(elite[0])
         if elite_list not in extra_returns["elite"]:
             extra_returns["elite"].append(elite_list)
+
+        extra_returns.setdefault("max_fitness", [])
+        extra_returns["max_fitness"].append(max_fitness[0])
 
         # offspring[len(population) - 1] = deepcopy(elite[0])
         population = offspring
