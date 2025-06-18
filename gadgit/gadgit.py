@@ -428,7 +428,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
             best_current = fit_series.argmax()
             current_elite_fitness = fit_series[np.where((population == elite[0]).all(1))[0][0]]
             elite = [deepcopy(population[fit_series.argmax()]) if best_current >= current_elite_fitness else elite[0]]
-        if kwargs["elite_max"] == "3":
+        elif kwargs["elite_max"] == "3":
             # print(fit_series[np.where((population == elite[0]).all(1))])
             # print(fit_series[len(population) - 1])
             elite = [deepcopy(population[fit_series.argmin()])]
