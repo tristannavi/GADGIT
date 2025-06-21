@@ -372,87 +372,35 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     # Offload SoR to table
     fit_series: NDArray
 
-    if kwargs["fitness_max"] != True and kwargs["fitness_max"] != False:
-        raise AttributeError("fitness_max must be True or False")
-
-    if kwargs["elite_max"] != "1" and kwargs["elite_max"] != "2" and kwargs["elite_max"] != "3" and kwargs["elite_max"] != "4":
-        raise AttributeError("elite_max must be 1, 2, 3, or 4")
-
-    if kwargs["tournament_max"] != True and kwargs["tournament_max"] != False:
-        raise AttributeError("tournament_max must be True or False")
-
-    fitness_max = kwargs["fitness_max"]
-    fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum, minimize=fitness_max)
+    fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum)
     print("Gen:", 0, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
 
-    if kwargs["elite_max"] == "1" or kwargs["elite_max"] == "2":
-        elite = [deepcopy(population[fit_series.argmax()])]
-    else:
-        elite = [deepcopy(population[fit_series.argmin()])]
-    extra_returns.setdefault("max_fitness", [])
-    extra_returns["max_fitness"].append(max_fitness[0])
+
+    elite = [deepcopy(population[fit_series.argmin()])]
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
-        # if gen % 10 == 0:
-        #     print(gen)
         # Select the next generation individuals to breed
-        tournament_max = kwargs["tournament_max"]
-        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series,
-                                         max=tournament_max)
+        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
 
         population = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population) - 1)
 
         # Strict elitism
-        # print(population[len(population) - 1])
         population[len(population) - 1] = deepcopy(elite[0])
-        # print(population[len(population) - 1])
 
         # Offload SoR to table
-        fitness_max = kwargs["fitness_max"]
         fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population,
-                                                                          gene_info.sum, minimize=fitness_max)
+                                                                          gene_info.sum)
         print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
-        # best_offspring_fitness = population[fit_series.argmin()].fitness.values[0]
-        # elite_fitness = fit_series[population.index(elite[0])]
-
-        # best_current = fit_series.argmax()
-        # current_elite_fitness = fit_series[np.where((population == elite[0]).all(1))[0][0]]
-        # elite = [deepcopy(population[fit_series.argmax()]) if best_current >= current_elite_fitness else elite[0]]
-        if kwargs["elite_max"] == "1":
-            elite = [deepcopy(population[fit_series.argmax()])]
-        elif kwargs["elite_max"] == "2":
-            best_current = fit_series.argmax()
-            current_elite_fitness = fit_series[np.where((population == elite[0]).all(1))[0][0]]
-            elite = [deepcopy(population[fit_series.argmax()]) if best_current >= current_elite_fitness else elite[0]]
-        elif kwargs["elite_max"] == "3":
-            # print(fit_series[np.where((population == elite[0]).all(1))])
-            # print(fit_series[len(population) - 1])
-            elite = [deepcopy(population[fit_series.argmin()])]
-        elif kwargs["elite_max"] == "4":
-            best_current = fit_series.argmin()
-            current_elite_fitness = fit_series[np.where((population == elite[0]).all(1))[0][0]]
-            elite = [deepcopy(population[fit_series.argmin()]) if best_current < current_elite_fitness else elite[0]]
-        else:
-            raise AttributeError
-
-        if len(elite) != 1:
-            raise AttributeError
+        elite = [deepcopy(population[fit_series.argmin()])]
 
         extra_returns.setdefault("elite", [])
         elite_list = list(elite[0])
         if elite_list not in extra_returns["elite"]:
             extra_returns["elite"].append(elite_list)
-
-        extra_returns.setdefault("max_fitness", [])
-        extra_returns["max_fitness"].append(max_fitness[0])
-
-        # population[len(population) - 1] = deepcopy(elite[0])
-        # population = population
-        # del population
 
         # Update frontier based on elite index
         # How many times the gene has been seen in the elite community
