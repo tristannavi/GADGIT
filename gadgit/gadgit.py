@@ -232,10 +232,10 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
 
     pop = population_builder(gene_info, ga_info.pop)
 
-    pop, _, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
+    pop, log, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
                                                  cross_meth, kwargs=kwargs)
 
-    return pop, {}, hof, extra_returns
+    return pop, log, hof, extra_returns
 
 
 @numba.njit
@@ -371,10 +371,11 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
     # Offload SoR to table
     fit_series: NDArray
-
     fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum)
     print("Gen:", 0, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
 
+    log: NDArray = np.zeros(shape=(ngen+1, 3*len(gene_info.obj_list) +1))
+    log[0] = [0, *avg_fitness, *max_fitness, *min_fitness]
 
     elite = [deepcopy(population[fit_series.argmin()])]
 
@@ -393,6 +394,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
                                                                           gene_info.sum)
         print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
 
+        log[ngen] = [ngen, *avg_fitness, *max_fitness, *min_fitness]
+
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
         elite = [deepcopy(population[fit_series.argmin()])]
@@ -406,4 +409,4 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # How many times the gene has been seen in the elite community
         gene_info.frontier[elite[0]] += 1
 
-    return population, {}, elite, extra_returns
+    return population, log, elite, extra_returns
