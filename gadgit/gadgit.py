@@ -201,43 +201,6 @@ def tournament_selection(gene_info: GeneInfo, individuals: NDArray, k: int, tour
     return chosen
 
 
-def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
-    """
-    This function executes a genetic algorithm (GA) for optimization, using a specified crossover
-    method defined in the `GAInfo` argument. The genetic algorithm starts by creating an initial
-    population and then evolves it over several generations according to the given parameters.
-    The function determines the crossover method to be used based on the string provided in
-    `ga_info.cross_meth`. The genetic algorithm uses the `ea_sum_of_ranks` function to evaluate
-    the population over generations.
-
-    :param gene_info: Information about the genes used in the genetic algorithm.
-    :param ga_info: Contains configuration data for the genetic algorithm, including
-                    crossover method, population size, mutation/crossover probabilities,
-                    and the number of generations.
-    :param kwargs: Optional keyword arguments that can be passed to the genetic
-                   algorithm or related utility functions.
-    :return: A tuple containing:
-             - **pop**: Final evolved population from the last generation.
-             - **dict**: Placeholder for additional data (currently empty).
-             - **hof**: The best entities (Hall of Fame) identified by the genetic algorithm.
-             - **extra_returns**: Any additional data returned by the execution.
-    """
-    if ga_info.cross_meth == 'ops':
-        cross_meth = cx_OPS
-    elif ga_info.cross_meth == 'sdb':
-        cross_meth = cx_SDB
-    # elif ga_info.cross_meth == 'both':
-    else:
-        raise AttributeError('Invalid crossover string specified')
-
-    pop = population_builder(gene_info, ga_info.pop)
-
-    pop, log, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
-                                                 cross_meth, kwargs=kwargs)
-
-    return pop, log, hof, extra_returns
-
-
 @numba.njit
 def _rank(array: NDArray) -> NDArray:
     """
@@ -349,13 +312,51 @@ def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, c
     """
     for i in range(1, pop_size, 2):
         if gene_info.rand.random() < cxpb:
-            cross_meth_func(gene_info, offspring[i - 1], offspring[i])
+            offspring[i - 1], offspring[i] = cross_meth_func(gene_info, offspring[i - 1], offspring[i])
 
     for i in range(pop_size):
         if gene_info.rand.random() < mutpb:
             offspring[i] = mut_flipper(gene_info, offspring[i])
 
     return offspring
+
+
+def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
+    """
+    This function executes a genetic algorithm (GA) for optimization, using a specified crossover
+    method defined in the `GAInfo` argument. The genetic algorithm starts by creating an initial
+    population and then evolves it over several generations according to the given parameters.
+    The function determines the crossover method to be used based on the string provided in
+    `ga_info.cross_meth`. The genetic algorithm uses the `ea_sum_of_ranks` function to evaluate
+    the population over generations.
+
+    :param gene_info: Information about the genes used in the genetic algorithm.
+    :param ga_info: Contains configuration data for the genetic algorithm, including
+                    crossover method, population size, mutation/crossover probabilities,
+                    and the number of generations.
+    :param kwargs: Optional keyword arguments that can be passed to the genetic
+                   algorithm or related utility functions.
+    :return: A tuple containing:
+             - **pop**: Final evolved population from the last generation.
+             - **dict**: Placeholder for additional data (currently empty).
+             - **hof**: The best entities (Hall of Fame) identified by the genetic algorithm.
+             - **extra_returns**: Any additional data returned by the execution.
+    """
+    if ga_info.cross_meth == 'ops':
+        cross_meth = cx_OPS
+    elif ga_info.cross_meth == 'sdb':
+        cross_meth = cx_SDB
+    # elif ga_info.cross_meth == 'both':
+    else:
+        raise AttributeError('Invalid crossover string specified')
+
+    pop = population_builder(gene_info, ga_info.pop)
+    logs = None
+
+    pop, log, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
+                                                   cross_meth, kwargs=kwargs)
+
+    return pop, log, hof, extra_returns
 
 
 def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, cxpb: float, mutpb: float, ngen: int,
@@ -368,14 +369,18 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     internally by the package.
     """
     extra_returns: dict = {}
+    gen = 0
 
     # Offload SoR to table
     fit_series: NDArray
     fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum)
-    print("Gen:", 0, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
+    gene_counts = np.sum(population == kwargs.setdefault("loo_gene", ""))
+    print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness, "Unique:",
+          len(np.unique(population)), "Count:", gene_counts)
+    # print(f"{0}, {max_fitness[0]}, {len(np.unique(population))}")
 
-    log: NDArray = np.zeros(shape=(ngen+1, 3*len(gene_info.obj_list) +1))
-    log[0] = [0, *avg_fitness, *max_fitness, *min_fitness]
+    log: NDArray = np.zeros(shape=(ngen + 1, 3 * len(gene_info.obj_list) + 1 + 2))
+    log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
 
     elite = [deepcopy(population[fit_series.argmin()])]
 
@@ -392,9 +397,12 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # Offload SoR to table
         fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population,
                                                                           gene_info.sum)
-        print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
+        gene_counts = np.sum(population == kwargs.setdefault("loo_gene", ""))
+        print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness,
+              "Unique:", len(np.unique(population)), "Count:", gene_counts)
+        # print(f"{0}, {max_fitness[0]}, {len(np.unique(population))}")
 
-        log[ngen] = [ngen, *avg_fitness, *max_fitness, *min_fitness]
+        log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
