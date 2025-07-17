@@ -1,6 +1,5 @@
 from collections.abc import Callable
 from copy import deepcopy
-import numba
 import numpy as np
 from numpy import copy
 from numpy.typing import NDArray
@@ -201,7 +200,6 @@ def tournament_selection(gene_info: GeneInfo, individuals: NDArray, k: int, tour
     return chosen
 
 
-@numba.njit
 def _rank(array: NDArray) -> NDArray:
     """
     Calculate 1-based dense ranks of elements in a 1D array.
@@ -220,17 +218,12 @@ def _rank(array: NDArray) -> NDArray:
              elements in the input array. The length of the result array
              matches the length of the input array.
     """
-    unique = np.unique(array)
-    ranks = np.zeros(array.shape, np.int64)
-    for i in range(array.size):
-        for j in range(unique.size):
-            if array[i] == unique[j]:
-                ranks[i] = j + 1
-                break
-    return ranks
+    # `_`  -> sorted unique values
+    # `inv`-> for every element of `a` the index of the matching unique value
+    _, inv = np.unique(array, return_inverse=True)
+    return inv + 1  # make the ranks 1-based instead of 0-based
 
 
-@numba.njit
 def multi_eval_nb(data: NDArray,
                   population: NDArray,
                   fixed: NDArray,
