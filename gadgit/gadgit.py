@@ -200,7 +200,7 @@ def tournament_selection(gene_info: GeneInfo, individuals: NDArray, k: int, tour
     return chosen
 
 
-def _rank(array: NDArray) -> NDArray:
+def _rank(array: NDArray, minimize: bool = True) -> NDArray:
     """
     Calculate 1-based dense ranks of elements in a 1D array.
 
@@ -221,6 +221,9 @@ def _rank(array: NDArray) -> NDArray:
     # `_`  -> sorted unique values
     # `inv`-> for every element of `a` the index of the matching unique value
     _, inv = np.unique(array, return_inverse=True)
+    if not minimize:
+        inv += 1
+        return np.max(inv) + 1 - inv
     return inv + 1  # make the ranks 1-based instead of 0-based
 
 
@@ -257,7 +260,7 @@ def multi_eval_nb(data: NDArray,
     # Sum the centralities for every gene in each individual for each objective
     for gene in range(com_size):
         centrality_indices = population[:, gene]
-        all_rows += data[centrality_indices, :]
+        all_rows += data[centrality_indices]
 
     # Add the centrality measures of the fixed genes
     for objective in range(num_objs):
@@ -266,23 +269,20 @@ def multi_eval_nb(data: NDArray,
         avg_values[objective] = all_rows[:, objective].mean()
         min_values[objective] = all_rows[:, objective].min()
 
-    # # Rank each individual based on the sum of their centralities
-    # sor = np.zeros_like(all_rows)
-    # for objective in range(num_objs):
-    #     ranks = _rank(all_rows[:, objective])
-    #     max_rank = ranks.max()
-    #     for individual_index in range(pop_size):
-    #         sor[individual_index, objective] = ranks[individual_index] / max_rank
-    #
-    # # Sum all objective ranks for each individual and then rank the individuals based on those sums
-    # obj_sums = np.sum(sor, axis=1)
-    # final_ranks = _rank(obj_sums)
-    #
-    # if not minimize:
-    #     return np.max(final_ranks) + 1 - final_ranks, max_values, avg_values, min_values
-    # else:
-    #     return final_ranks, max_values, avg_values, min_values
-    return all_rows, max_values, avg_values, min_values
+    # Rank each individual based on the sum of their centralities
+    sor = np.zeros_like(all_rows)
+    for objective in range(num_objs):
+        ranks = _rank(all_rows[:, objective], minimize)
+        max_rank = ranks.max()
+        for individual_index in range(pop_size):
+            sor[individual_index, objective] = ranks[individual_index] / max_rank
+
+    # Sum all objective ranks for each individual and then rank the individuals based on those sums
+    obj_sums = np.sum(sor, axis=1)
+    final_ranks = _rank(obj_sums)
+
+    return final_ranks, max_values, avg_values, min_values
+    # return all_rows, max_values, avg_values, min_values
 
 
 def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
@@ -382,7 +382,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     for gen in range(1, ngen + 1):
         # Select the next generation individuals to breed
         # breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
-        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series, max=True)
+        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
 
         population = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population) - 1)
 
@@ -401,8 +401,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
-        # elite = [deepcopy(population[fit_series.argmin()])]
-        elite = [deepcopy(population[fit_series.argmax()])]
+        elite = [deepcopy(population[fit_series.argmin()])]
+        # elite = [deepcopy(population[fit_series.argmax()])]
 
         # extra_returns.setdefault("elite", [])
         # elite_list = list(elite[0])
