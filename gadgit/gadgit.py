@@ -365,10 +365,6 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     extra_returns: dict = {}
     gen = 0
 
-    population[0] = np.repeat(2015, gene_info.com_size)
-    population[0][1] = 2016
-    population[0][2] = 2016
-
     # Offload SoR to table
     fit_series: NDArray
     fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum)
