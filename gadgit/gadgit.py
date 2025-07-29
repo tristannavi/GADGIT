@@ -67,7 +67,7 @@ def valid_add(gene_info: GeneInfo, individual: NDArray, count: int | None = None
 
 
 def valid_remove(gene_info: GeneInfo, individual: NDArray, count: int | None = None) -> int:
-    return gene_info.rand.choice(np.array([x for x in range(len(individual))]), count, replace=False)
+    return gene_info.rand.choice(len(individual), count, replace=False)
 
 
 def self_correction(gene_info: GeneInfo, individual: NDArray) -> NDArray:
@@ -257,7 +257,7 @@ def multi_eval_nb(data: NDArray,
     # Sum the centralities for every gene in each individual for each objective
     for gene in range(com_size):
         centrality_indices = population[:, gene]
-        all_rows += data[centrality_indices]
+        all_rows += data[centrality_indices, :]
 
     # Add the centrality measures of the fixed genes
     for objective in range(num_objs):
@@ -266,22 +266,23 @@ def multi_eval_nb(data: NDArray,
         avg_values[objective] = all_rows[:, objective].mean()
         min_values[objective] = all_rows[:, objective].min()
 
-    # Rank each individual based on the sum of their centralities
-    sor = np.zeros_like(all_rows)
-    for objective in range(num_objs):
-        ranks = _rank(all_rows[:, objective])
-        max_rank = ranks.max()
-        for individual_index in range(pop_size):
-            sor[individual_index, objective] = ranks[individual_index] / max_rank
-
-    # Sum all objective ranks for each individual and then rank the individuals based on those sums
-    obj_sums = np.sum(sor, axis=1)
-    final_ranks = _rank(obj_sums)
-
-    if not minimize:
-        return np.max(final_ranks) + 1 - final_ranks, max_values, avg_values, min_values
-    else:
-        return final_ranks, max_values, avg_values, min_values
+    # # Rank each individual based on the sum of their centralities
+    # sor = np.zeros_like(all_rows)
+    # for objective in range(num_objs):
+    #     ranks = _rank(all_rows[:, objective])
+    #     max_rank = ranks.max()
+    #     for individual_index in range(pop_size):
+    #         sor[individual_index, objective] = ranks[individual_index] / max_rank
+    #
+    # # Sum all objective ranks for each individual and then rank the individuals based on those sums
+    # obj_sums = np.sum(sor, axis=1)
+    # final_ranks = _rank(obj_sums)
+    #
+    # if not minimize:
+    #     return np.max(final_ranks) + 1 - final_ranks, max_values, avg_values, min_values
+    # else:
+    #     return final_ranks, max_values, avg_values, min_values
+    return all_rows, max_values, avg_values, min_values
 
 
 def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
@@ -364,10 +365,14 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     extra_returns: dict = {}
     gen = 0
 
+    population[0] = np.repeat(2015, gene_info.com_size)
+    population[0][1] = 2016
+    population[0][2] = 2016
+
     # Offload SoR to table
     fit_series: NDArray
     fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum)
-    gene_counts = np.sum(population == kwargs.setdefault("loo_gene", ""))
+    gene_counts = 0  # np.sum(population == kwargs.setdefault("loo_gene", ""))
     print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness, "Unique:",
           len(np.unique(population)), "Count:", gene_counts)
     # print(f"{0}, {max_fitness[0]}, {len(np.unique(population))}")
@@ -380,7 +385,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     # Begin the generational process
     for gen in range(1, ngen + 1):
         # Select the next generation individuals to breed
-        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
+        # breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
+        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series, max=True)
 
         population = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population) - 1)
 
@@ -390,7 +396,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # Offload SoR to table
         fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population,
                                                                           gene_info.sum)
-        gene_counts = np.sum(population == kwargs.setdefault("loo_gene", ""))
+        gene_counts = 0  # np.sum(population == kwargs.setdefault("loo_gene", ""))
         print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness,
               "Unique:", len(np.unique(population)), "Count:", gene_counts)
         # print(f"{0}, {max_fitness[0]}, {len(np.unique(population))}")
@@ -399,12 +405,13 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
-        elite = [deepcopy(population[fit_series.argmin()])]
+        # elite = [deepcopy(population[fit_series.argmin()])]
+        elite = [deepcopy(population[fit_series.argmax()])]
 
-        extra_returns.setdefault("elite", [])
-        elite_list = list(elite[0])
-        if elite_list not in extra_returns["elite"]:
-            extra_returns["elite"].append(elite_list)
+        # extra_returns.setdefault("elite", [])
+        # elite_list = list(elite[0])
+        # if elite_list not in extra_returns["elite"]:
+        #     extra_returns["elite"].append(elite_list)
 
         # Update frontier based on elite index
         # How many times the gene has been seen in the elite community
