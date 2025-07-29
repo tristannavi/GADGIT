@@ -381,12 +381,12 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     for gen in range(1, ngen + 1):
         # Select the next generation individuals to breed
         # breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
-        breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
+        breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series)
 
-        population = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population) - 1)
+        population = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population))
 
         # Strict elitism
-        population[len(population) - 1] = deepcopy(elite[0])
+        # population[len(population) - 1] = deepcopy(elite[0])
 
         # Offload SoR to table
         fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population,
@@ -403,6 +403,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         elite = [deepcopy(population[fit_series.argmin()])]
         # elite = [deepcopy(population[fit_series.argmax()])]
 
+        population[fit_series.argmax()] = deepcopy(elite[0])
         # extra_returns.setdefault("elite", [])
         # elite_list = list(elite[0])
         # if elite_list not in extra_returns["elite"]:
