@@ -208,10 +208,6 @@ def _rank(array: NDArray, minimize: bool = True) -> NDArray:
     equal elements receive the same rank, and ranks are assigned consecutively
     from 1 to the number of unique elements.
 
-    The implementation uses a linear search over the unique elements of
-    the input array for each element, making it suitable for moderate-sized
-    arrays.
-
     :param array: The input 1D array for which ranks are to be computed.
                   It should be a numpy array.
     :return: A 1D numpy array containing the 1-based dense ranks of the
@@ -345,7 +341,6 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
         raise AttributeError('Invalid crossover string specified')
 
     pop = population_builder(gene_info, ga_info.pop)
-    logs = None
 
     pop, log, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
                                                    cross_meth, kwargs=kwargs)
