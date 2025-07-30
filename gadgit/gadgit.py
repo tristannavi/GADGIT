@@ -278,7 +278,7 @@ def multi_eval_nb(data: NDArray,
     # final_ranks = _rank(obj_sums)
 
     # return final_ranks, max_values, avg_values, min_values
-    return all_rows[:,0], max_values, avg_values, min_values
+    return all_rows[:, 0], max_values, avg_values, min_values
 
 
 def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
@@ -362,7 +362,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
     # Offload SoR to table
     fit_series: NDArray
-    fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum, minimize=True)
+    fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum,
+                                                                      minimize=True)
     gene_counts = 0  # np.sum(population == kwargs.setdefault("loo_gene", ""))
     print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness, "Unique:",
           len(np.unique(population)), "Count:", gene_counts)
@@ -402,6 +403,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # population[fit_series.argmax()] = deepcopy(elite[0])
         population[fit_series.argmin()] = deepcopy(elite[0])
+        population = np.sort(population, axis=1)
         # extra_returns.setdefault("elite", [])
         # elite_list = list(elite[0])
         # if elite_list not in extra_returns["elite"]:
