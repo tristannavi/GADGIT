@@ -37,4 +37,3 @@ Repository = "https://github.com/Andesha/gadgit"
 Documentation = "https://gadgit.readthedocs.io"
 
 [tool.setuptools_scm]
-version_file = "pkg/_version.py"
