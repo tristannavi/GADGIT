@@ -366,7 +366,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
     # Offload SoR to table
     fit_series: NDArray
-    fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum)
+    fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum, minimize=True)
     gene_counts = 0  # np.sum(population == kwargs.setdefault("loo_gene", ""))
     print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness, "Unique:",
           len(np.unique(population)), "Count:", gene_counts)
@@ -375,13 +375,14 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     log: NDArray = np.zeros(shape=(ngen + 1, 3 * len(gene_info.obj_list) + 1 + 2))
     log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
 
-    elite = [deepcopy(population[fit_series.argmin()])]
+    # elite = [deepcopy(population[fit_series.argmin()])]
+    elite = [deepcopy(population[fit_series.argmax()])]
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
         # Select the next generation individuals to breed
         # breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
-        breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series)
+        breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series, max=True)
 
         population = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population))
 
@@ -390,7 +391,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # Offload SoR to table
         fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population,
-                                                                          gene_info.sum)
+                                                                          gene_info.sum, minimize=True)
         gene_counts = 0  # np.sum(population == kwargs.setdefault("loo_gene", ""))
         print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness,
               "Unique:", len(np.unique(population)), "Count:", gene_counts)
@@ -400,10 +401,11 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
-        elite = [deepcopy(population[fit_series.argmin()])]
-        # elite = [deepcopy(population[fit_series.argmax()])]
+        # elite = [deepcopy(population[fit_series.argmin()])]
+        elite = [deepcopy(population[fit_series.argmax()])]
 
-        population[fit_series.argmax()] = deepcopy(elite[0])
+        # population[fit_series.argmax()] = deepcopy(elite[0])
+        population[fit_series.argmin()] = deepcopy(elite[0])
         # extra_returns.setdefault("elite", [])
         # elite_list = list(elite[0])
         # if elite_list not in extra_returns["elite"]:
