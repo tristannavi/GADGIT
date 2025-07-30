@@ -63,7 +63,7 @@ def valid_add(gene_info: GeneInfo, individual: NDArray, count: int | None = None
     mask = np.ones(gene_info.gene_count, dtype=bool)
     mask[individual] = False
     mask[gene_info.fixed_list_nums] = False
-    return gene_info.rand.choice(gene_info.indiv_len[mask], count, replace=False)
+    return gene_info.rand.choice(gene_info.all_genes[mask], count, replace=False)
 
 
 def valid_remove(gene_info: GeneInfo, individual: NDArray, count: int | None = None) -> int:
