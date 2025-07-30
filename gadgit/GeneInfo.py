@@ -2,12 +2,33 @@ from typing import List
 
 import numpy as np
 import pandas as pd
-from numpy.random import SeedSequence, PCG64DXSM
+from numpy.random import SeedSequence, PCG64DXSM, Generator
 from pandas import DataFrame
 
 
 class GeneInfo:
-    """This class stores information regarding a specific problem's biological parameters."""
+    """
+    A class to manage genetic information and parameters for evolutionary algorithms.
+
+    This class provides tools to handle genetic datasets, configure genetic algorithm (GA)
+    parameters, and compute relevant values for problem-solving using genetic algorithms.
+    It initializes with a dataset and specified objectives, allowing for fixed genes
+    and specifying candidate community sizes.
+
+    :ivar frame_path: The path or DataFrame containing genetic data.
+    :ivar data_frame: A pandas DataFrame loaded from the frame_path.
+    :ivar data_numpy: Numpy representation of the selected objectives.
+    :ivar gene_count: Total number of genes in the dataset.
+    :ivar obj_list: List of objectives to be used in the genetic algorithm.
+    :ivar fixed_list: List of genes to keep fixed in candidate solutions.
+    :ivar fixed_list_nums: Numpy array of indices of fixed genes within the dataset.
+    :ivar com_size: Size of the candidate community, adjusted by the fixed list.
+    :ivar indiv_len: Numpy array representing indices within the community size.
+    :ivar sum: Numpy array representing the sum of fixed genes for specified objectives.
+    :ivar frontier: Numpy array representing a solution frontier, initialized to zeros.
+    :ivar seed: Seed used for initializing the random number generator.
+    :ivar rand: Random number generator initialized with the provided seed.
+    """
 
     def __init__(self, frame_path: str | DataFrame, obj_list: List[str], com_size: int = 100,
                  fixed_list: List[str] = None, seed: int = SeedSequence().entropy):
@@ -47,8 +68,7 @@ class GeneInfo:
         self.gene_count = self.data_frame.shape[0]
         self.obj_list = obj_list
         self.fixed_list = fixed_list
-        self.fixed_list_nums = np.array(self.data_frame[
-                                           self.data_frame['GeneName'].isin(fixed_list)].index.to_list())
+        self.fixed_list_nums = np.array(self.data_frame[self.data_frame['GeneName'].isin(fixed_list)].index.to_list())
 
         # Reorder the dataframe so that the fixed genes appear first
         # to_appear_first = self.fixed_list_ids
@@ -57,6 +77,7 @@ class GeneInfo:
         # self.fixed_list_ids = [x for x in range(len(self.fixed_list))]
 
         self.com_size = com_size - len(fixed_list)
+        self.indiv_len = np.arange(self.com_size)
         self.sum = self.data_frame[self.data_frame["GeneName"].isin(self.fixed_list)][
             self.obj_list].sum().to_numpy()
         self.frontier = np.zeros(shape=self.gene_count, dtype=np.int64)  # [0 for x in range(self.gene_count)]
