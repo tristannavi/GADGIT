@@ -282,7 +282,7 @@ def multi_eval_nb(data: NDArray,
     # final_ranks = _rank(obj_sums)
 
     # return final_ranks, max_values, avg_values, min_values
-    return all_rows[0], max_values, avg_values, min_values
+    return all_rows[:,0], max_values, avg_values, min_values
 
 
 def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
