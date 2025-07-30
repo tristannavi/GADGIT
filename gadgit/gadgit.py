@@ -270,18 +270,19 @@ def multi_eval_nb(data: NDArray,
         min_values[objective] = all_rows[:, objective].min()
 
     # Rank each individual based on the sum of their centralities
-    sor = np.zeros_like(all_rows)
-    for objective in range(num_objs):
-        ranks = _rank(all_rows[:, objective], minimize)
-        max_rank = ranks.max()
-        for individual_index in range(pop_size):
-            sor[individual_index, objective] = ranks[individual_index] / max_rank
+    # sor = np.zeros_like(all_rows)
+    # for objective in range(num_objs):
+    #     ranks = _rank(all_rows[:, objective], minimize)
+    #     max_rank = ranks.max()
+    #     for individual_index in range(pop_size):
+    #         sor[individual_index, objective] = ranks[individual_index] / max_rank
+    #
+    # # Sum all objective ranks for each individual and then rank the individuals based on those sums
+    # obj_sums = np.sum(sor, axis=1)
+    # final_ranks = _rank(obj_sums)
 
-    # Sum all objective ranks for each individual and then rank the individuals based on those sums
-    obj_sums = np.sum(sor, axis=1)
-    final_ranks = _rank(obj_sums)
-
-    return final_ranks, max_values, avg_values, min_values
+    # return final_ranks, max_values, avg_values, min_values
+    return all_rows[0], max_values, avg_values, min_values
 
 
 def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
