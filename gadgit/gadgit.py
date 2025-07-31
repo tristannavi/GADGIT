@@ -308,7 +308,7 @@ def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, c
         if gene_info.rand.random() < mutpb:
             offspring[i] = mut_flipper(gene_info, offspring[i])
 
-    return offspring
+    return np.sort(offspring, axis=1)
 
 
 def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
@@ -391,7 +391,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
                                                                           gene_info.sum, minimize=True)
         gene_counts = 0  # np.sum(population == kwargs.setdefault("loo_gene", ""))
         print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness,
-              "Unique:", len(np.unique(population)), "Count:", gene_counts)
+              "Unique:", len(np.unique(population)), "Count:", gene_counts, "Unique individuals:", np.unique(population, axis=0))
         # print(f"{0}, {max_fitness[0]}, {len(np.unique(population))}")
 
         log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
@@ -403,7 +403,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # population[fit_series.argmax()] = deepcopy(elite[0])
         population[fit_series.argmin()] = deepcopy(elite[0])
-        population = np.sort(population, axis=1)
+        # population = np.sort(population, axis=1)
         # extra_returns.setdefault("elite", [])
         # elite_list = list(elite[0])
         # if elite_list not in extra_returns["elite"]:
