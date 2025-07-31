@@ -94,7 +94,8 @@ def self_correction(gene_info: GeneInfo, individual: NDArray) -> NDArray:
     mask[unique_indices] = 0
     # If there are too few genes in the unique array, add more
     if len(unique) < gene_info.com_size:
-        individual[mask] = valid_add(gene_info, unique, gene_info.com_size - len(unique))
+        # individual[mask] = valid_add(gene_info, unique, gene_info.com_size - len(unique))
+        individual = np.append(individual, valid_add(gene_info, unique, gene_info.com_size - len(unique)))
     if len(unique) > gene_info.com_size:
         individual = np.delete(unique, valid_remove(gene_info, unique, len(unique) - gene_info.com_size))
 
@@ -120,8 +121,8 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, 
     cxpoint = gene_info.rand.integers(1, gene_info.com_size - 1)
     # ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
 
-    ind1_new = np.append(ind1[ind1<cxpoint], ind2[ind2>=cxpoint])
-    ind2_new = np.append(ind2[ind2<cxpoint], ind1[ind1>=cxpoint])
+    ind1_new = np.append(ind1[ind1 < cxpoint], ind2[ind2 >= cxpoint])
+    ind2_new = np.append(ind2[ind2 < cxpoint], ind1[ind1 >= cxpoint])
 
     # return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
     return self_correction(gene_info, ind1_new), self_correction(gene_info, ind2_new)
@@ -397,7 +398,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
                                                                           gene_info.sum, minimize=True)
         gene_counts = 0  # np.sum(population == kwargs.setdefault("loo_gene", ""))
         print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness,
-              "Unique:", len(np.unique(population)), "Count:", gene_counts, "Unique individuals:", len(np.unique(population, axis=0)))
+              "Unique:", len(np.unique(population)), "Count:", gene_counts, "Unique individuals:",
+              len(np.unique(population, axis=0)))
         # print(f"{0}, {max_fitness[0]}, {len(np.unique(population))}")
 
         log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
