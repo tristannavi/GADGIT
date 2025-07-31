@@ -391,7 +391,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
                                                                           gene_info.sum, minimize=True)
         gene_counts = 0  # np.sum(population == kwargs.setdefault("loo_gene", ""))
         print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness,
-              "Unique:", len(np.unique(population)), "Count:", gene_counts, "Unique individuals:", np.unique(population, axis=0))
+              "Unique:", len(np.unique(population)), "Count:", gene_counts, "Unique individuals:", len(np.unique(population, axis=0)))
         # print(f"{0}, {max_fitness[0]}, {len(np.unique(population))}")
 
         log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
