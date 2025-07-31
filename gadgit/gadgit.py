@@ -95,7 +95,7 @@ def self_correction(gene_info: GeneInfo, individual: NDArray) -> NDArray:
     # If there are too few genes in the unique array, add more
     if len(unique) < gene_info.com_size:
         # individual[mask] = valid_add(gene_info, unique, gene_info.com_size - len(unique))
-        individual = np.append(individual, valid_add(gene_info, unique, gene_info.com_size - len(unique)))
+        individual = np.append(unique, valid_add(gene_info, unique, gene_info.com_size - len(unique)))
     if len(unique) > gene_info.com_size:
         individual = np.delete(unique, valid_remove(gene_info, unique, len(unique) - gene_info.com_size))
 
