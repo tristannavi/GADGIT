@@ -96,8 +96,10 @@ def self_correction(gene_info: GeneInfo, individual: NDArray) -> NDArray:
     if len(unique) < gene_info.com_size:
         # individual[mask] = valid_add(gene_info, unique, gene_info.com_size - len(unique))
         individual = np.append(unique, valid_add(gene_info, unique, gene_info.com_size - len(unique)))
-    if len(unique) > gene_info.com_size:
+    elif len(unique) > gene_info.com_size:
         individual = np.delete(unique, valid_remove(gene_info, unique, len(unique) - gene_info.com_size))
+    else:
+        individual = unique
 
     return individual
 
@@ -121,8 +123,8 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, 
     cxpoint = gene_info.rand.integers(1, gene_info.com_size - 1)
     # ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
 
-    ind1_new = np.append(ind1[ind1 < cxpoint], ind2[ind2 >= cxpoint])
-    ind2_new = np.append(ind2[ind2 < cxpoint], ind1[ind1 >= cxpoint])
+    ind1_new = np.append(ind1[ind1 < cxpoint], ind2[ind2 > cxpoint])
+    ind2_new = np.append(ind2[ind2 < cxpoint], ind1[ind1 > cxpoint])
 
     # return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
     return self_correction(gene_info, ind1_new), self_correction(gene_info, ind2_new)
@@ -315,7 +317,8 @@ def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, c
         if gene_info.rand.random() < mutpb:
             offspring[i] = mut_flipper(gene_info, offspring[i])
 
-    return np.sort(offspring, axis=1)
+    offspring.sort(axis=1)
+    return offspring
 
 
 def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
@@ -348,6 +351,7 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
         raise AttributeError('Invalid crossover string specified')
 
     pop = population_builder(gene_info, ga_info.pop)
+    pop.sort(axis=1)
 
     pop, log, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
                                                    cross_meth, kwargs=kwargs)
