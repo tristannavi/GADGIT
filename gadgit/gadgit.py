@@ -61,13 +61,13 @@ def valid_add(gene_info: GeneInfo, individual: NDArray, count: int | None = None
         to the individual's sequence.
     """
     mask = np.ones(gene_info.gene_count, dtype=bool)
-    mask[individual.astype(np.int64)] = False
+    mask[individual] = False
     mask[gene_info.fixed_list_nums] = False
     return gene_info.rand.choice(gene_info.all_genes[mask], count, replace=False)
 
 
 def valid_remove(gene_info: GeneInfo, individual: NDArray, count: int | None = None) -> int:
-    return gene_info.rand.choice(individual, count, replace=False)
+    return gene_info.rand.choice(len(individual), count, replace=False)
 
 
 def self_correction(gene_info: GeneInfo, individual: NDArray) -> NDArray:
@@ -90,28 +90,15 @@ def self_correction(gene_info: GeneInfo, individual: NDArray) -> NDArray:
     """
 
     unique, unique_indices = np.unique(individual, return_index=True)
-    mask = np.ones(len(unique), np.bool)
-    # mask[unique_indices] = 1
-    mask[np.isnan(unique)] = 0
-    unique2 = deepcopy(unique)
-    individual2 = deepcopy(individual)
-    individual = np.full_like(individual, np.nan)
-    unique = unique[mask]
-    individual[unique.astype(np.int64)] = unique
+    mask = np.ones(len(individual), np.bool)
+    mask[unique_indices] = 0
     # If there are too few genes in the unique array, add more
     if len(unique) < gene_info.com_size:
         # individual[mask] = valid_add(gene_info, unique, gene_info.com_size - len(unique))
-        add = valid_add(gene_info, unique, gene_info.com_size - len(unique))
-        individual[add] = add
-    elif len(unique) > gene_info.com_size:
-        remove = valid_remove(gene_info, unique, len(unique) - gene_info.com_size).astype(np.int64)
-        individual[remove] = np.nan
-    else:
-        individual = individual
-        # return individual
+        individual = np.append(individual, valid_add(gene_info, unique, gene_info.com_size - len(unique)))
+    if len(unique) > gene_info.com_size:
+        individual = np.delete(unique, valid_remove(gene_info, unique, len(unique) - gene_info.com_size))
 
-    if len(np.unique(individual)) - 1 != gene_info.com_size:
-        print(f"ERROR: {len(np.unique(individual)) - 1} != {gene_info.com_size}")
     return individual
 
 
@@ -132,13 +119,13 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, 
     """
 
     cxpoint = gene_info.rand.integers(1, gene_info.com_size - 1)
-    ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
+    # ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
 
-    # ind1_new = np.append(ind1[ind1 < cxpoint], ind2[ind2 > cxpoint])
-    # ind2_new = np.append(ind2[ind2 < cxpoint], ind1[ind1 > cxpoint])
+    ind1_new = np.append(ind1[ind1 < cxpoint], ind2[ind2 >= cxpoint])
+    ind2_new = np.append(ind2[ind2 < cxpoint], ind1[ind1 >= cxpoint])
 
-    return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
-    # return self_correction(gene_info, ind1_new), self_correction(gene_info, ind2_new)
+    # return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
+    return self_correction(gene_info, ind1_new), self_correction(gene_info, ind2_new)
 
 
 def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
@@ -153,8 +140,8 @@ def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
         This is modified in place based on valid mutation operations.
     :return: Updated genetic individual after performing mutations.
     """
-    remove = valid_remove(gene_info, np.unique(individual.astype(np.int64)))
-    individual[remove] = valid_add(gene_info, np.unique(individual.astype(np.int64)))
+    remove = valid_remove(gene_info, individual)
+    individual[remove] = valid_add(gene_info, individual)
 
     return individual
 
@@ -176,12 +163,12 @@ def population_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
     :return: A 2D numpy array representing the population, where each row is an
         individual and each column is a gene ID.
     """
-    population = np.full(shape=(pop_size, gene_info.gene_count), dtype=np.float64, fill_value=np.nan)
+    population = np.zeros(shape=(pop_size, gene_info.com_size), dtype=np.int64)
     valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_nums))
 
     for i in range(pop_size):
         individual = gene_info.rand.choice(valid_choices, gene_info.com_size, replace=False)
-        population[i][individual] = individual
+        population[i] = individual
 
     return population
 
@@ -276,7 +263,6 @@ def multi_eval_nb(data: NDArray,
     # Sum the centralities for every gene in each individual for each objective
     for gene in range(com_size):
         centrality_indices = population[:, gene]
-        centrality_indices = np.where(centrality_indices != np.nan)
         all_rows += data[centrality_indices]
 
     # Add the centrality measures of the fixed genes
@@ -329,8 +315,7 @@ def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, c
         if gene_info.rand.random() < mutpb:
             offspring[i] = mut_flipper(gene_info, offspring[i])
 
-    # offspring.sort(axis=1)
-    return offspring
+    return np.sort(offspring, axis=1)
 
 
 def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
@@ -362,9 +347,7 @@ def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
     else:
         raise AttributeError('Invalid crossover string specified')
 
-    # gene_info.gene_count -= 1
     pop = population_builder(gene_info, ga_info.pop)
-    # pop.sort(axis=1)
 
     pop, log, hof, extra_returns = ea_sum_of_ranks(ga_info, gene_info, pop, ga_info.cxpb, ga_info.mutpb, ga_info.gen,
                                                    cross_meth, kwargs=kwargs)
@@ -403,7 +386,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     for gen in range(1, ngen + 1):
         # Select the next generation individuals to breed
         # breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
-        breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series, max=False)
+        breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series, max=True)
 
         population = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population))
 
@@ -436,7 +419,6 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # Update frontier based on elite index
         # How many times the gene has been seen in the elite community
-        gene_info.frontier[elite[0].astype(np.int64)] += 1
+        gene_info.frontier[elite[0]] += 1
 
-    elite[0] = elite[0][~np.isnan(elite[0])].astype(np.int64)
     return population, log, elite, extra_returns
