@@ -383,14 +383,14 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     log: NDArray = np.zeros(shape=(ngen + 1, 3 * len(gene_info.obj_list) + 1 + 2))
     log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
 
-    # elite = [deepcopy(population[fit_series.argmin()])]
-    elite = [deepcopy(population[fit_series.argmax()])]
+    elite = [deepcopy(population[fit_series.argmin()])]
+    # elite = [deepcopy(population[fit_series.argmax()])]
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
         # Select the next generation individuals to breed
         # breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
-        breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series, max=True)
+        breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series, max=False)
 
         population = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population))
 
@@ -410,11 +410,11 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
-        # elite = [deepcopy(population[fit_series.argmin()])]
-        elite = [deepcopy(population[fit_series.argmax()])]
+        elite = [deepcopy(population[fit_series.argmin()])]
+        # elite = [deepcopy(population[fit_series.argmax()])]
 
-        # population[fit_series.argmax()] = deepcopy(elite[0])
-        population[fit_series.argmin()] = deepcopy(elite[0])
+        population[fit_series.argmax()] = deepcopy(elite[0])
+        # population[fit_series.argmin()] = deepcopy(elite[0])
         # population = np.sort(population, axis=1)
         # extra_returns.setdefault("elite", [])
         # elite_list = list(elite[0])
