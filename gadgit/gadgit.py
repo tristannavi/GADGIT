@@ -67,7 +67,11 @@ def valid_add(gene_info: GeneInfo, individual: NDArray, count: int | None = None
 
 
 def valid_remove(gene_info: GeneInfo, individual: NDArray, count: int | None = None) -> int:
-    return gene_info.rand.choice(len(individual), count, replace=False)
+    mask = np.ones(len(individual), dtype=bool)
+    mask[individual] = False
+    mask = ~mask
+    mask[gene_info.fixed_list_nums] = False
+    return gene_info.rand.choice(mask.nonzero()[0], count, replace=False)
 
 
 def self_correction(gene_info: GeneInfo, individual: NDArray) -> NDArray:
@@ -89,15 +93,14 @@ def self_correction(gene_info: GeneInfo, individual: NDArray) -> NDArray:
         `gene_info`.
     """
 
-    unique, unique_indices = np.unique(individual, return_index=True)
-    mask = np.ones(len(individual), np.bool)
-    mask[unique_indices] = 0
+    individual[gene_info.fixed_list_nums] = 1
     # If there are too few genes in the unique array, add more
-    if len(unique) < gene_info.com_size:
-        # individual[mask] = valid_add(gene_info, unique, gene_info.com_size - len(unique))
-        individual = np.append(individual, valid_add(gene_info, unique, gene_info.com_size - len(unique)))
-    if len(unique) > gene_info.com_size:
-        individual = np.delete(unique, valid_remove(gene_info, unique, len(unique) - gene_info.com_size))
+    if individual.sum() < gene_info.com_size:
+        add = valid_add(gene_info, individual, gene_info.com_size - individual.sum())
+        individual[add] = 1
+    if individual.sum() > gene_info.com_size:
+        remove = valid_remove(gene_info, individual, individual.sum() - gene_info.com_size)
+        individual[remove] = 0
 
     return individual
 
@@ -119,13 +122,13 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, 
     """
 
     cxpoint = gene_info.rand.integers(1, gene_info.com_size - 1)
-    # ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
+    ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
 
-    ind1_new = np.append(ind1[ind1 < cxpoint], ind2[ind2 >= cxpoint])
-    ind2_new = np.append(ind2[ind2 < cxpoint], ind1[ind1 >= cxpoint])
+    # ind1_new = np.append(ind1[ind1 < cxpoint], ind2[ind2 >= cxpoint])
+    # ind2_new = np.append(ind2[ind2 < cxpoint], ind1[ind1 >= cxpoint])
 
-    # return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
-    return self_correction(gene_info, ind1_new), self_correction(gene_info, ind2_new)
+    return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
+    # return self_correction(gene_info, ind1_new), self_correction(gene_info, ind2_new)
 
 
 def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
@@ -141,7 +144,9 @@ def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
     :return: Updated genetic individual after performing mutations.
     """
     remove = valid_remove(gene_info, individual)
-    individual[remove] = valid_add(gene_info, individual)
+    add = valid_add(gene_info, individual)
+    individual[remove] = 0
+    individual[add] = 1
 
     return individual
 
@@ -163,12 +168,13 @@ def population_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
     :return: A 2D numpy array representing the population, where each row is an
         individual and each column is a gene ID.
     """
-    population = np.zeros(shape=(pop_size, gene_info.com_size), dtype=np.int64)
+    population = np.zeros(shape=(pop_size, gene_info.gene_count), dtype=np.bool)
     valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_nums))
 
     for i in range(pop_size):
-        individual = gene_info.rand.choice(valid_choices, gene_info.com_size, replace=False)
-        population[i] = individual
+        individual = gene_info.rand.choice(valid_choices, gene_info.com_size - len(gene_info.fixed_list), replace=False)
+        population[i][individual] = 1
+        population[i][gene_info.fixed_list_nums] = 1
 
     return population
 
@@ -232,7 +238,6 @@ def _rank(array: NDArray, minimize: bool = True) -> NDArray:
 
 def multi_eval_nb(data: NDArray,
                   population: NDArray,
-                  fixed: NDArray,
                   minimize: bool = False) -> tuple[NDArray, NDArray, NDArray, NDArray]:
     """
     Evaluates and ranks a population based on given data, a fixed vector, and whether the ranking is
@@ -261,13 +266,12 @@ def multi_eval_nb(data: NDArray,
     min_values = np.zeros(num_objs)
 
     # Sum the centralities for every gene in each individual for each objective
-    for gene in range(com_size):
-        centrality_indices = population[:, gene]
-        all_rows += data[centrality_indices]
+    for individual in range(pop_size):
+        centrality_indices = population[individual].nonzero()[0]
+        all_rows[individual] = data[centrality_indices].sum(axis=0)
 
     # Add the centrality measures of the fixed genes
     for objective in range(num_objs):
-        all_rows[:, objective] += fixed[objective]
         max_values[objective] = all_rows[:, objective].max()
         avg_values[objective] = all_rows[:, objective].mean()
         min_values[objective] = all_rows[:, objective].min()
@@ -315,7 +319,7 @@ def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, c
         if gene_info.rand.random() < mutpb:
             offspring[i] = mut_flipper(gene_info, offspring[i])
 
-    return np.sort(offspring, axis=1)
+    return offspring
 
 
 def ga(gene_info: GeneInfo, ga_info: GAInfo, **kwargs):
@@ -369,7 +373,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
     # Offload SoR to table
     fit_series: NDArray
-    fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, gene_info.sum,
+    fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population,
                                                                       minimize=True)
     gene_counts = 0  # np.sum(population == kwargs.setdefault("loo_gene", ""))
     print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness, "Unique:",
@@ -394,8 +398,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # population[len(population) - 1] = deepcopy(elite[0])
 
         # Offload SoR to table
-        fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population,
-                                                                          gene_info.sum, minimize=True)
+        fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, minimize=True)
         gene_counts = 0  # np.sum(population == kwargs.setdefault("loo_gene", ""))
         print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness,
               "Unique:", len(np.unique(population)), "Count:", gene_counts, "Unique individuals:",
