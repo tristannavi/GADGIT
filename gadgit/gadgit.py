@@ -205,7 +205,7 @@ def tournament_selection(gene_info: GeneInfo, individuals: NDArray, k: int, tour
     """
     chosen = np.zeros_like(individuals)
     for i in range(k):
-        aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=False)
+        aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=True)
         if max:
             chosen[i] = individuals[aspirants][fitnesses[aspirants].argmax()]
         else:
