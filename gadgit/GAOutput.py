@@ -46,9 +46,9 @@ class GAOutput:
 
         self.extra = kwargs
 
-        self._post_run()
-        if verbose:
-            print(self)
+        # self._post_run()
+        # if verbose:
+        #     print(self)
 
     def _post_run(self) -> None:
         """
