@@ -395,7 +395,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # population[len(population) - 1] = deepcopy(elite[0])
 
         # Offload SoR to table
-        fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, minimize=True)
+        fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population,
+                                                                          minimize=True)
         print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
 
         log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness]
@@ -415,6 +416,6 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # Update frontier based on elite index
         # How many times the gene has been seen in the elite community
-        gene_info.frontier[elite[0]] += 1
+        gene_info.frontier += elite[0]
 
     return population, log, elite, extra_returns

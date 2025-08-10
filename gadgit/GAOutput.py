@@ -1,5 +1,6 @@
 from typing import List, Tuple, Any
 
+import numpy as np
 import pandas as pd
 
 from gadgit import GeneInfo, GAInfo
@@ -46,9 +47,9 @@ class GAOutput:
 
         self.extra = kwargs
 
-        # self._post_run()
-        # if verbose:
-        #     print(self)
+        self._post_run()
+        if verbose:
+            print(self)
 
     def _post_run(self) -> None:
         """
@@ -62,11 +63,9 @@ class GAOutput:
         if 'GeneName' not in self.gene_info.data_frame.columns:
             raise AttributeError('Dataset must contain a "GeneName" column')
 
-        self.genes_in_elite = [self.gene_info.data_frame.loc[ind, 'GeneName'] for ind in sorted(list(self.elite))]
-        self.genes_in_elite.extend(self.gene_info.fixed_list)
+        self.genes_in_elite = [self.gene_info.data_frame.loc[ind, 'GeneName'] for ind in np.where(np.array(self.elite) == 1)[0]]
 
         self.frontier = self.gene_info.frontier
-        self.frontier[self.gene_info.fixed_list_nums] += self.ga_info.gen
         self.missed_nodes = [self.gene_info.data_frame.loc[ind, 'GeneName']
                              for ind, x in enumerate(self.frontier) if x == 0]
 
