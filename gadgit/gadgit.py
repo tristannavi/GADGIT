@@ -375,13 +375,10 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     fit_series: NDArray
     fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population,
                                                                       minimize=True)
-    gene_counts = 0  # np.sum(population == kwargs.setdefault("loo_gene", ""))
-    print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness, "Unique:",
-          len(np.unique(population)), "Count:", gene_counts)
-    # print(f"{0}, {max_fitness[0]}, {len(np.unique(population))}")
+    print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
 
-    log: NDArray = np.zeros(shape=(ngen + 1, 3 * len(gene_info.obj_list) + 1 + 2))
-    log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
+    log: NDArray = np.zeros(shape=(ngen + 1, 3 * len(gene_info.obj_list) + 1))
+    log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness]
 
     # elite = [deepcopy(population[fit_series.argmin()])]
     elite = [deepcopy(population[fit_series.argmax()])]
@@ -399,13 +396,9 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # Offload SoR to table
         fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population, minimize=True)
-        gene_counts = 0  # np.sum(population == kwargs.setdefault("loo_gene", ""))
-        print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness,
-              "Unique:", len(np.unique(population)), "Count:", gene_counts, "Unique individuals:",
-              len(np.unique(population, axis=0)))
-        # print(f"{0}, {max_fitness[0]}, {len(np.unique(population))}")
+        print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
 
-        log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
+        log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness]
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
