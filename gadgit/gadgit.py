@@ -315,9 +315,11 @@ def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, c
         if gene_info.rand.random() < cxpb:
             offspring[i - 1], offspring[i] = cross_meth_func(gene_info, offspring[i - 1], offspring[i])
 
-    for i in range(pop_size):
         if gene_info.rand.random() < mutpb:
             offspring[i] = mut_flipper(gene_info, offspring[i])
+            offspring[i - 1] = mut_flipper(gene_info, offspring[i - 1])
+
+    # for i in range(pop_size):
 
     return offspring
 
