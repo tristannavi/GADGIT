@@ -213,6 +213,34 @@ def tournament_selection(gene_info: GeneInfo, individuals: NDArray, k: int, tour
     return chosen
 
 
+def tournament_selection2(gene_info: GeneInfo, individuals: NDArray, tournsize: int,
+                          fitnesses: NDArray) -> NDArray:
+    """
+    Select individuals from a population using a tournament selection process.
+
+    This function uses a stochastic method to select individuals from a given
+    population (individuals) based on their fitness values (fitnesses). A subset
+    of individuals (aspirants) is selected at random, and the fittest or least
+    fit individual from this subset is chosen, depending on the maximization or
+    minimization goal. The process continues until the desired number of
+    individuals (k) is selected. Forked from DEAP.
+
+    :param gene_info: Object containing a random number generator for selecting
+        aspirants.
+    :param individuals: Array representing the population of individuals to
+        select from.
+    :param k: Number of individuals to select from the population.
+    :param tournsize: Number of aspirants in each tournament.
+    :param fitnesses: Array of fitness values corresponding to the individuals.
+    :param max: Indicator for selection goal; True for maximizing fitness and
+        False for minimizing fitness. Defaults to False.
+    :return: Array of selected individuals from the population based on the
+        tournament selection method.
+    """
+    aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=True)
+    return individuals[aspirants][fitnesses[aspirants].argmin()]
+
+
 def _rank(array: NDArray, minimize: bool = True) -> NDArray:
     """
     Calculate 1-based dense ranks of elements in a 1D array.
@@ -292,8 +320,8 @@ def multi_eval_nb(data: NDArray,
     # return all_rows[:, 0], max_values, avg_values, min_values
 
 
-def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
-           pop_size: int):
+def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
+           pop_size: int, elite: NDArray, fitnesses: NDArray, tournsize: int) -> NDArray:
     """
     Apply crossover and mutation on a given population of offspring based on the provided parameters.
     The function iterates over the population, performing crossover on adjacent individuals with a
@@ -301,7 +329,7 @@ def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, c
     determined by `mutpb`. These genetic operations help to introduce diversity and guide
     the population towards better solutions in evolutionary algorithms. Forked from DEAP.
 
-    :param offspring: The population of individuals to which crossover and mutation will be applied.
+    :param population: The population of individuals to which crossover and mutation will be applied.
     :param cxpb: The probability of performing crossover between two individuals.
     :param mutpb: The probability of mutating an individual in the population.
     :param gene_info: Instance containing metadata and tools needed for genetic operations,
@@ -311,13 +339,32 @@ def varAnd(offspring: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, c
 
     :return: The modified population of individuals after applying crossover and mutation operations.
     """
-    for i in range(1, pop_size, 2):
+    offspring = np.zeros_like(population)
+    offspring[0] = deepcopy(elite)
+    for i in range(1, pop_size - 1, 2):
+        selected_1 = tournament_selection2(gene_info, population, tournsize, fitnesses)
+        selected_2 = tournament_selection2(gene_info, population, tournsize, fitnesses)
         if gene_info.rand.random() < cxpb:
-            offspring[i - 1], offspring[i] = cross_meth_func(gene_info, offspring[i - 1], offspring[i])
+            offspring[i], offspring[i + 1] = cross_meth_func(gene_info, selected_1, selected_2)
+        else:
+            offspring[i] = deepcopy(selected_1)
+            offspring[i + 1] = deepcopy(selected_2)
 
         if gene_info.rand.random() < mutpb:
             offspring[i] = mut_flipper(gene_info, offspring[i])
-            offspring[i - 1] = mut_flipper(gene_info, offspring[i - 1])
+            offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1])
+
+    if len(population) % 2 == 0:
+        selected_1 = tournament_selection2(gene_info, population, tournsize, fitnesses)
+        selected_2 = tournament_selection2(gene_info, population, tournsize, fitnesses)
+        if gene_info.rand.random() < cxpb:
+            offspring[-1], _ = cross_meth_func(gene_info, selected_1, selected_2)
+        else:
+            offspring[-1] = deepcopy(selected_1)
+
+        if gene_info.rand.random() < mutpb:
+            offspring[-1] = mut_flipper(gene_info, offspring[-1])
+
 
     # for i in range(pop_size):
 
@@ -388,9 +435,17 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     for gen in range(1, ngen + 1):
         # Select the next generation individuals to breed
         # breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
-        breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series)
+        # fixed = np.zeros(gene_info.gene_count, dtype=np.bool)
+        # fixed[gene_info.fixed_list_nums] = 1
+        # for p in population:
+        #     or1 = np.bitwise_or(p, fixed)
+        #     if not np.array_equal(p, or1):
+        #         print(":(")
+        #     if p.sum() != 100:
+        #         print(":(")
+        # breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series)
 
-        population = varAnd(breed_pop, cxpb, mutpb, gene_info, cross_meth, len(population))
+        population = varAnd(population, cxpb, mutpb, gene_info, cross_meth, len(population), elite[0], fit_series, 5)
 
         # Strict elitism
         # population[len(population) - 1] = deepcopy(elite[0])
@@ -406,7 +461,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         elite = [deepcopy(population[fit_series.argmin()])]
         # elite = [deepcopy(population[fit_series.argmax()])]
 
-        population[fit_series.argmax()] = deepcopy(elite[0])
+        # population[fit_series.argmax()] = deepcopy(elite[0])
         # population[fit_series.argmin()] = deepcopy(elite[0])
         # population = np.sort(population, axis=1)
         # extra_returns.setdefault("elite", [])
