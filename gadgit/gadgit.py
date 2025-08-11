@@ -238,7 +238,7 @@ def tournament_selection2(gene_info: GeneInfo, individuals: NDArray, tournsize: 
         tournament selection method.
     """
     aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=True)
-    return individuals[aspirants][fitnesses[aspirants].argmin()]
+    return individuals[aspirants][fitnesses[aspirants].argmin()].copy()
 
 
 def _rank(array: NDArray, minimize: bool = True) -> NDArray:
@@ -347,8 +347,8 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
         if gene_info.rand.random() < cxpb:
             offspring[i], offspring[i + 1] = cross_meth_func(gene_info, selected_1, selected_2)
         else:
-            offspring[i] = deepcopy(selected_1)
-            offspring[i + 1] = deepcopy(selected_2)
+            offspring[i] = selected_1.copy()
+            offspring[i + 1] = selected_2.copy()
 
         if gene_info.rand.random() < mutpb:
             offspring[i] = mut_flipper(gene_info, offspring[i])
@@ -360,7 +360,7 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
         if gene_info.rand.random() < cxpb:
             offspring[-1], _ = cross_meth_func(gene_info, selected_1, selected_2)
         else:
-            offspring[-1] = deepcopy(selected_1)
+            offspring[-1] = selected_1.copy()
 
         if gene_info.rand.random() < mutpb:
             offspring[-1] = mut_flipper(gene_info, offspring[-1])
