@@ -245,7 +245,7 @@ def tournament_selection2(gene_info: GeneInfo, individuals: NDArray, tournsize: 
     return individuals[aspirants][fitnesses[aspirants].argmin()].copy()
 
 
-def _rank(array: NDArray, minimize: bool = False) -> NDArray:
+def _rank(array: NDArray, minimize: bool = True) -> NDArray:
     """
     Calculate 1-based dense ranks of elements in a 1D array.
 
@@ -262,9 +262,9 @@ def _rank(array: NDArray, minimize: bool = False) -> NDArray:
     # `_`  -> sorted unique values
     # `inv`-> for every element of `a` the index of the matching unique value
     _, inv = np.unique(array, return_inverse=True)
-    # if not minimize:
-    #     inv += 1
-    #     return np.max(inv) + 1 - inv
+    if not minimize:
+        inv += 1
+        return np.max(inv) + 1 - inv
     return inv + 1  # make the ranks 1-based instead of 0-based
 
 
