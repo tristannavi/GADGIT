@@ -121,14 +121,18 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, 
         operation and subsequent self-correction.
     """
 
-    cxpoint = gene_info.rand.integers(1, gene_info.com_size - 1)
-    ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
+    cxpoint = gene_info.rand.integers(1, gene_info.gene_count - 1)
+    ind1_new = copy(ind1)
+    ind2_new = copy(ind2)
+    ind1_new[cxpoint:] = copy(ind2[cxpoint:])
+    ind2_new[cxpoint:] = copy(ind1[cxpoint:])
+    # ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
 
     # ind1_new = np.append(ind1[ind1 < cxpoint], ind2[ind2 >= cxpoint])
     # ind2_new = np.append(ind2[ind2 < cxpoint], ind1[ind1 >= cxpoint])
 
-    return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
-    # return self_correction(gene_info, ind1_new), self_correction(gene_info, ind2_new)
+    # return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
+    return self_correction(gene_info, ind1_new), self_correction(gene_info, ind2_new)
 
 
 def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
@@ -241,7 +245,7 @@ def tournament_selection2(gene_info: GeneInfo, individuals: NDArray, tournsize: 
     return individuals[aspirants][fitnesses[aspirants].argmin()].copy()
 
 
-def _rank(array: NDArray, minimize: bool = True) -> NDArray:
+def _rank(array: NDArray, minimize: bool = False) -> NDArray:
     """
     Calculate 1-based dense ranks of elements in a 1D array.
 
@@ -258,9 +262,9 @@ def _rank(array: NDArray, minimize: bool = True) -> NDArray:
     # `_`  -> sorted unique values
     # `inv`-> for every element of `a` the index of the matching unique value
     _, inv = np.unique(array, return_inverse=True)
-    if not minimize:
-        inv += 1
-        return np.max(inv) + 1 - inv
+    # if not minimize:
+    #     inv += 1
+    #     return np.max(inv) + 1 - inv
     return inv + 1  # make the ranks 1-based instead of 0-based
 
 
