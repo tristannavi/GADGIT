@@ -122,14 +122,14 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, 
     """
 
     cxpoint = gene_info.rand.integers(1, gene_info.gene_count - 1)
-    # ind1_new = copy(ind1)
-    # ind2_new = copy(ind2)
-    # ind1_new[cxpoint:] = copy(ind2[cxpoint:])
-    # ind2_new[cxpoint:] = copy(ind1[cxpoint:])
+    ind1_new = copy(ind1)
+    ind2_new = copy(ind2)
+    ind1_new[cxpoint:] = copy(ind2[cxpoint:])
+    ind2_new[cxpoint:] = copy(ind1[cxpoint:])
     # ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
 
-    ind1_new = np.append(ind1[ind1 < cxpoint], ind2[ind2 >= cxpoint])
-    ind2_new = np.append(ind2[ind2 < cxpoint], ind1[ind1 >= cxpoint])
+    # ind1_new = np.append(ind1[ind1 < cxpoint], ind2[ind2 >= cxpoint])
+    # ind2_new = np.append(ind2[ind2 < cxpoint], ind1[ind1 >= cxpoint])
 
     # return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
     return self_correction(gene_info, ind1_new), self_correction(gene_info, ind2_new)
@@ -176,9 +176,11 @@ def population_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
     valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_nums))
 
     for i in range(pop_size):
-        individual = gene_info.rand.choice(valid_choices, gene_info.com_size - len(gene_info.fixed_list), replace=False)
+        # individual = gene_info.rand.choice(valid_choices, gene_info.com_size - len(gene_info.fixed_list), replace=False)
+        individual = gene_info.rand.choice(gene_info.all_genes, gene_info.com_size, replace=False)
         population[i][individual] = 1
         population[i][gene_info.fixed_list_nums] = 1
+        self_correction(gene_info, population[i])
 
     return population
 
@@ -209,7 +211,7 @@ def tournament_selection(gene_info: GeneInfo, individuals: NDArray, k: int, tour
     """
     chosen = np.zeros_like(individuals)
     for i in range(k):
-        aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=True)
+        aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=False)
         if max:
             chosen[i] = individuals[aspirants][fitnesses[aspirants].argmax()]
         else:
@@ -241,7 +243,7 @@ def tournament_selection2(gene_info: GeneInfo, individuals: NDArray, tournsize: 
     :return: Array of selected individuals from the population based on the
         tournament selection method.
     """
-    aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=True)
+    aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=False)
     return individuals[aspirants][fitnesses[aspirants].argmin()].copy()
 
 
