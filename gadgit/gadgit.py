@@ -462,7 +462,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series)
 
         # pop_temp = deepcopy(population)
-        population = varAnd(population, cxpb, mutpb, gene_info, cross_meth, len(population), elite[0], fit_series, 5)
+        population2 = varAnd(population, cxpb, mutpb, gene_info, cross_meth, len(population), elite[0], fit_series, 5)
         # count = 0
         # for i in range(len(population)):
         #     if not np.array_equal(pop_temp[i], population[i]):
