@@ -358,8 +358,11 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
             offspring[i], offspring[i + 1] = cross_meth_func(gene_info, selected_1.copy(), selected_2.copy())
 
             if gene_info.rand.random() < mutpb:
-                offspring[i] = mut_flipper(gene_info, offspring[i])
-                offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1])
+                # offspring[i] = mut_flipper(gene_info, offspring[i])
+                # offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1])
+                offspring[i] = mut_flipper(gene_info, selected_1)
+                offspring[i + 1] = mut_flipper(gene_info, selected_2)
+
         else:
             offspring[i] = selected_1
             offspring[i + 1] = selected_2
@@ -375,7 +378,9 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
             offspring[-1], _ = cross_meth_func(gene_info, selected_1.copy(), selected_2.copy())
 
             if gene_info.rand.random() < mutpb:
-                offspring[-1] = mut_flipper(gene_info, offspring[-1])
+                # offspring[-1] = mut_flipper(gene_info, offspring[-1])
+                offspring[-1] = mut_flipper(gene_info, selected_1)
+
         else:
             offspring[-1] = selected_1
 
@@ -462,7 +467,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series)
 
         # pop_temp = deepcopy(population)
-        population2 = varAnd(population, cxpb, mutpb, gene_info, cross_meth, len(population), elite[0], fit_series, 5)
+        population = varAnd(population, cxpb, mutpb, gene_info, cross_meth, len(population), elite[0], fit_series, 5)
         # count = 0
         # for i in range(len(population)):
         #     if not np.array_equal(pop_temp[i], population[i]):
@@ -476,12 +481,13 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # Offload SoR to table
         fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population)
         print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness,
-              # "Elites:", len(set([str(x.nonzero()[0]) for x in extra_returns["elites"]]))
+              "Elites:", len(set([str(x.nonzero()[0]) for x in extra_returns["elites"]]))
               )
         # else:
         #     print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness
         #           )
-        # "Unique:", np.unique(population, axis=0).shape
+        # if gen > 800:
+        #     print("Unique:", np.unique(population, axis=0).shape)
 
         log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness]
 
