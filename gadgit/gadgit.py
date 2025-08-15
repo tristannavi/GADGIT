@@ -1,3 +1,4 @@
+import sys
 from collections.abc import Callable
 from copy import deepcopy
 import numpy as np
@@ -122,17 +123,17 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, 
     """
 
     cxpoint = gene_info.rand.integers(1, gene_info.gene_count - 1)
-    ind1_new = copy(ind1)
-    ind2_new = copy(ind2)
-    ind1_new[cxpoint:] = copy(ind2[cxpoint:])
-    ind2_new[cxpoint:] = copy(ind1[cxpoint:])
-    # ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
+    # ind1_new = copy(ind1)
+    # ind2_new = copy(ind2)
+    # ind1_new[cxpoint:] = copy(ind2[cxpoint:])
+    # ind2_new[cxpoint:] = copy(ind1[cxpoint:])
+    ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
 
     # ind1_new = np.append(ind1[ind1 < cxpoint], ind2[ind2 >= cxpoint])
     # ind2_new = np.append(ind2[ind2 < cxpoint], ind1[ind1 >= cxpoint])
 
-    # return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
-    return self_correction(gene_info, ind1_new), self_correction(gene_info, ind2_new)
+    return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
+    # return self_correction(gene_info, ind1_new), self_correction(gene_info, ind2_new)
 
 
 def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
@@ -244,7 +245,10 @@ def tournament_selection2(gene_info: GeneInfo, individuals: NDArray, tournsize: 
         tournament selection method.
     """
     aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=False)
-    return individuals[aspirants][fitnesses[aspirants].argmin()].copy()
+    # return individuals[aspirants][fitnesses[aspirants].argmin()]
+    # print()
+    # sys.exit()
+    return aspirants[fitnesses[aspirants].argmin()]
 
 
 def _rank(array: NDArray, minimize: bool = True) -> NDArray:
@@ -347,31 +351,39 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
     """
     offspring = np.zeros_like(population)
     offspring[0] = deepcopy(elite)
+    selected_1 = None
     for i in range(1, pop_size - 1, 2):
-        selected_1 = tournament_selection2(gene_info, population, tournsize, fitnesses)
-        selected_2 = tournament_selection2(gene_info, population, tournsize, fitnesses)
+        selected_1 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)]
+        selected_2 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)]
         if gene_info.rand.random() < cxpb:
-            offspring[i], offspring[i + 1] = cross_meth_func(gene_info, selected_1, selected_2)
-        else:
-            offspring[i] = selected_1.copy()
-            offspring[i + 1] = selected_2.copy()
+            offspring[i], offspring[i + 1] = cross_meth_func(gene_info, selected_1.copy(), selected_2.copy())
 
-        if gene_info.rand.random() < mutpb:
-            offspring[i] = mut_flipper(gene_info, offspring[i])
-            offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1])
+            if gene_info.rand.random() < mutpb:
+                offspring[i] = mut_flipper(gene_info, offspring[i])
+                offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1])
+        else:
+            offspring[i] = selected_1
+            offspring[i + 1] = selected_2
+
+            if gene_info.rand.random() < mutpb:
+                offspring[i] = mut_flipper(gene_info, selected_1)
+                offspring[i + 1] = mut_flipper(gene_info, selected_2)
 
     if len(population) % 2 == 0:
-        selected_1 = tournament_selection2(gene_info, population, tournsize, fitnesses)
-        selected_2 = tournament_selection2(gene_info, population, tournsize, fitnesses)
+        selected_1 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)]
+        selected_2 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)]
         if gene_info.rand.random() < cxpb:
-            offspring[-1], _ = cross_meth_func(gene_info, selected_1, selected_2)
+            offspring[-1], _ = cross_meth_func(gene_info, selected_1.copy(), selected_2.copy())
+
+            if gene_info.rand.random() < mutpb:
+                offspring[-1] = mut_flipper(gene_info, offspring[-1])
         else:
-            offspring[-1] = selected_1.copy()
+            offspring[-1] = selected_1
 
-        if gene_info.rand.random() < mutpb:
-            offspring[-1] = mut_flipper(gene_info, offspring[-1])
+            if gene_info.rand.random() < mutpb:
+                offspring[-1] = mut_flipper(gene_info, selected_1)
 
-
+    selected_1[:] = 1
     # for i in range(pop_size):
 
     return offspring
@@ -435,6 +447,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness]
 
     elite = [deepcopy(population[fit_series.argmin()])]
+    # extra_returns["elites"] = [deepcopy(population[fit_series.argmin()])]
     # elite = [deepcopy(population[fit_series.argmax()])]
 
     # Begin the generational process
@@ -451,7 +464,14 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         #         print(":(")
         # breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series)
 
+        # pop_temp = deepcopy(population)
         population = varAnd(population, cxpb, mutpb, gene_info, cross_meth, len(population), elite[0], fit_series, 5)
+        # count = 0
+        # for i in range(len(population)):
+        #     if not np.array_equal(pop_temp[i], population[i]):
+        #         count+=1
+        # print(count)
+        # sys.exit()
 
         # Strict elitism
         # population[len(population) - 1] = deepcopy(elite[0])
@@ -465,6 +485,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
         elite = [deepcopy(population[fit_series.argmin()])]
+        # extra_returns["elites"].append(population[fit_series.argmin()].copy())
         # elite = [deepcopy(population[fit_series.argmax()])]
 
         # population[fit_series.argmax()] = deepcopy(elite[0])
