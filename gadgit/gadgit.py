@@ -246,8 +246,6 @@ def tournament_selection2(gene_info: GeneInfo, individuals: NDArray, tournsize: 
     """
     aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=False)
     # return individuals[aspirants][fitnesses[aspirants].argmin()]
-    # print()
-    # sys.exit()
     return aspirants[fitnesses[aspirants].argmin()]
 
 
@@ -351,10 +349,11 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
     """
     offspring = np.zeros_like(population)
     offspring[0] = deepcopy(elite)
-    selected_1 = None
     for i in range(1, pop_size - 1, 2):
-        selected_1 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)]
-        selected_2 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)]
+        selected_1 = tournament_selection2(gene_info, population, tournsize, fitnesses)
+        selected_2 = tournament_selection2(gene_info, population, tournsize, fitnesses)
+        selected_1 = population[selected_1]
+        selected_2 = population[selected_2]
         if gene_info.rand.random() < cxpb:
             offspring[i], offspring[i + 1] = cross_meth_func(gene_info, selected_1.copy(), selected_2.copy())
 
@@ -383,9 +382,7 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
             if gene_info.rand.random() < mutpb:
                 offspring[-1] = mut_flipper(gene_info, selected_1)
 
-    selected_1[:] = 1
     # for i in range(pop_size):
-
     return offspring
 
 
@@ -447,7 +444,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness]
 
     elite = [deepcopy(population[fit_series.argmin()])]
-    # extra_returns["elites"] = [deepcopy(population[fit_series.argmin()])]
+    extra_returns["elites"] = [deepcopy(population[fit_series.argmin()])]
     # elite = [deepcopy(population[fit_series.argmax()])]
 
     # Begin the generational process
@@ -469,7 +466,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # count = 0
         # for i in range(len(population)):
         #     if not np.array_equal(pop_temp[i], population[i]):
-        #         count+=1
+        #         count += 1
         # print(count)
         # sys.exit()
 
@@ -478,14 +475,20 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # Offload SoR to table
         fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population)
-        print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
+        print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness,
+              # "Elites:", len(set([str(x.nonzero()[0]) for x in extra_returns["elites"]]))
+              )
+        # else:
+        #     print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness
+        #           )
+        # "Unique:", np.unique(population, axis=0).shape
 
         log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness]
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
         elite = [deepcopy(population[fit_series.argmin()])]
-        # extra_returns["elites"].append(population[fit_series.argmin()].copy())
+        extra_returns["elites"].append(population[fit_series.argmin()].copy())
         # elite = [deepcopy(population[fit_series.argmax()])]
 
         # population[fit_series.argmax()] = deepcopy(elite[0])
