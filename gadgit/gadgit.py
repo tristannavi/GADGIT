@@ -358,10 +358,10 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
             offspring[i], offspring[i + 1] = cross_meth_func(gene_info, selected_1.copy(), selected_2.copy())
 
             if gene_info.rand.random() < mutpb:
-                # offspring[i] = mut_flipper(gene_info, offspring[i])
-                # offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1])
-                offspring[i] = mut_flipper(gene_info, selected_1)
-                offspring[i + 1] = mut_flipper(gene_info, selected_2)
+                offspring[i] = mut_flipper(gene_info, offspring[i])
+                offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1])
+                # offspring[i] = mut_flipper(gene_info, selected_1)
+                # offspring[i + 1] = mut_flipper(gene_info, selected_2)
 
         else:
             offspring[i] = selected_1
@@ -378,8 +378,8 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
             offspring[-1], _ = cross_meth_func(gene_info, selected_1.copy(), selected_2.copy())
 
             if gene_info.rand.random() < mutpb:
-                # offspring[-1] = mut_flipper(gene_info, offspring[-1])
-                offspring[-1] = mut_flipper(gene_info, selected_1)
+                offspring[-1] = mut_flipper(gene_info, offspring[-1])
+                # offspring[-1] = mut_flipper(gene_info, selected_1)
 
         else:
             offspring[-1] = selected_1
@@ -448,8 +448,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     log: NDArray = np.zeros(shape=(ngen + 1, 3 * len(gene_info.obj_list) + 1))
     log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness]
 
-    elite = [deepcopy(population[fit_series.argmin()])]
-    extra_returns["elites"] = [deepcopy(population[fit_series.argmin()])]
+    elite = fit_series.argmin()
+    # extra_returns["elites"] = [deepcopy(population[fit_series.argmin()])]
     # elite = [deepcopy(population[fit_series.argmax()])]
 
     # Begin the generational process
@@ -467,7 +467,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series)
 
         # pop_temp = deepcopy(population)
-        population = varAnd(population, cxpb, mutpb, gene_info, cross_meth, len(population), elite[0], fit_series, 5)
+        population = varAnd(population, cxpb, mutpb, gene_info, cross_meth, len(population), deepcopy(population[elite]), fit_series, 5)
         # count = 0
         # for i in range(len(population)):
         #     if not np.array_equal(pop_temp[i], population[i]):
@@ -493,8 +493,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
-        elite = [deepcopy(population[fit_series.argmin()])]
-        extra_returns["elites"].append(population[fit_series.argmin()].copy())
+        elite = fit_series.argmin()
+        # extra_returns["elites"].append(population[fit_series.argmin()].copy())
         # elite = [deepcopy(population[fit_series.argmax()])]
 
         # population[fit_series.argmax()] = deepcopy(elite[0])
@@ -507,6 +507,6 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # Update frontier based on elite index
         # How many times the gene has been seen in the elite community
-        gene_info.frontier += elite[0]
+        gene_info.frontier += population[elite]
 
-    return population, log, elite, extra_returns
+    return population, log, [population[elite]], extra_returns
