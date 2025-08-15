@@ -481,7 +481,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # Offload SoR to table
         fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population)
         print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness,
-              "Elites:", len(set([str(x.nonzero()[0]) for x in extra_returns["elites"]]))
+              # "Elites:", len(set([str(x.nonzero()[0]) for x in extra_returns["elites"]]))
               )
         # else:
         #     print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness
