@@ -396,7 +396,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
     # log: NDArray = np.zeros(shape=(ngen + 1, 3 * len(gene_info.obj_list) + 1 + 2))
     # log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
-    logs = create_log(ngen, len(gene_info.obj_list), 5)
+    logs = create_log(ngen, len(gene_info.obj_list), 1)
     log(logs, gen, *avg_fitness, *max_fitness, *min_fitness, len(elites))
 
     # elite = [deepcopy(population[fit_series.argmin()])]
