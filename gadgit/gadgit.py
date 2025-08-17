@@ -384,22 +384,20 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     # Offload SoR to table
     fit_series: NDArray
     fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population)
-    loo = kwargs.setdefault("loo", "")
-    gene_counts = np.sum(population == loo)
-    unique = len(np.unique(population))
-    unique_individuals = len(np.unique(population, axis=0))
+    # loo = kwargs.setdefault("loo", "")
+    # gene_counts = np.sum(population == loo)
+    # unique = len(np.unique(population))
+    # unique_individuals = len(np.unique(population, axis=0))
     elite = [population[fit_series.argmin()].copy()]
     elites = {"".join([str(x) for x in np.sort(elite[0])])}
-    loo1 = loo in elite[0]
-    print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness, "Unique:",
-          unique, "Count:", gene_counts, "Unique individuals:",
-          unique_individuals, "Elite:", len(elites), "Loo:", loo1)
+    # loo1 = loo in elite[0]
+    print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness, "Elite:", len(elites))
     # print(f"{0}, {max_fitness[0]}, {len(np.unique(population))}")
 
     # log: NDArray = np.zeros(shape=(ngen + 1, 3 * len(gene_info.obj_list) + 1 + 2))
     # log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
     logs = create_log(ngen, len(gene_info.obj_list), 5)
-    log(logs, gen, *avg_fitness, *max_fitness, *min_fitness, unique, gene_counts, unique_individuals, len(elites), loo)
+    log(logs, gen, *avg_fitness, *max_fitness, *min_fitness, len(elites))
 
     # elite = [deepcopy(population[fit_series.argmin()])]
 
@@ -416,20 +414,17 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # Offload SoR to table
         fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population)
-        gene_counts = np.sum(population == kwargs.setdefault("loo", ""))
-        unique = len(np.unique(population))
-        unique_individuals = len(np.unique(population, axis=0))
+        # gene_counts = np.sum(population == kwargs.setdefault("loo", ""))
+        # unique = len(np.unique(population))
+        # unique_individuals = len(np.unique(population, axis=0))
         elite = [population[fit_series.argmin()].copy()]
         elites.add("".join([str(x) for x in np.sort(elite[0])]))
-        loo1 = loo in elite[0]
-        print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness,
-              "Unique:", unique, "Count:", gene_counts, "Unique individuals:",
-              unique_individuals, "Elite:", len(elites), "Loo:", loo1)
+        # loo1 = loo in elite[0]
+        print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness, "Elite:", len(elites))
         # print(f"{0}, {max_fitness[0]}, {len(np.unique(population))}")
 
         # log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
-        log(logs, gen, *avg_fitness, *max_fitness, *min_fitness, unique, gene_counts, unique_individuals, len(elites),
-            loo1)
+        log(logs, gen, *avg_fitness, *max_fitness, *min_fitness, len(elites))
 
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
