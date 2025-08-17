@@ -1,6 +1,4 @@
-import sys
 from collections.abc import Callable
-from copy import deepcopy
 import numpy as np
 from numpy import copy
 from numpy.typing import NDArray
@@ -68,6 +66,7 @@ def valid_add(gene_info: GeneInfo, individual: NDArray, count: int | None = None
 
 
 def valid_remove(gene_info: GeneInfo, individual: NDArray, count: int | None = None) -> int:
+    # Gets all non-fixed genes and returns a random one
     mask = np.ones(len(individual), dtype=bool)
     mask[individual] = False
     mask = ~mask
@@ -148,10 +147,10 @@ def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
         This is modified in place based on valid mutation operations.
     :return: Updated genetic individual after performing mutations.
     """
-    remove = valid_remove(gene_info, individual)
     add = valid_add(gene_info, individual)
-    individual[remove] = 0
     individual[add] = 1
+    remove = valid_remove(gene_info, individual)
+    individual[remove] = 0
 
     return individual
 
@@ -269,7 +268,7 @@ def _rank(array: NDArray, minimize: bool = True) -> NDArray:
     if not minimize:
         inv += 1
         return np.max(inv) + 1 - inv
-    return inv + 1  # make the ranks 1-based instead of 0-based
+    return inv  # make the ranks 1-based instead of 0-based
 
 
 def multi_eval_nb(data: NDArray,
@@ -296,10 +295,10 @@ def multi_eval_nb(data: NDArray,
     """
     pop_size, com_size = population.shape
     num_objs = data.shape[1]
-    all_rows = np.zeros(shape=(pop_size, num_objs))
-    max_values = np.zeros(num_objs)
-    avg_values = np.zeros(num_objs)
-    min_values = np.zeros(num_objs)
+    all_rows = np.zeros(shape=(pop_size, num_objs), dtype=np.float64)
+    max_values = np.zeros(num_objs, dtype=np.float64)
+    avg_values = np.zeros(num_objs, dtype=np.float64)
+    min_values = np.zeros(num_objs, dtype=np.float64)
 
     # Sum the centralities for every gene in each individual for each objective
     for individual in range(pop_size):
@@ -316,13 +315,16 @@ def multi_eval_nb(data: NDArray,
     sor = np.zeros_like(all_rows)
     for objective in range(num_objs):
         ranks = _rank(all_rows[:, objective], minimize)
+        ranks[ranks.argmax()] = 0
         max_rank = ranks.max()
         for individual_index in range(pop_size):
             sor[individual_index, objective] = ranks[individual_index] / max_rank
 
     # Sum all objective ranks for each individual and then rank the individuals based on those sums
     obj_sums = np.sum(sor, axis=1)
-    final_ranks = _rank(obj_sums)
+    obj_sums /= num_objs
+    # final_ranks = _rank(obj_sums)
+    final_ranks = obj_sums
 
     return final_ranks, max_values, avg_values, min_values
     # return all_rows[:, 0], max_values, avg_values, min_values
@@ -348,7 +350,7 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
     :return: The modified population of individuals after applying crossover and mutation operations.
     """
     offspring = np.zeros_like(population)
-    offspring[0] = deepcopy(elite)
+    offspring[0] = elite.copy()
     for i in range(1, pop_size - 1, 2):
         selected_1 = tournament_selection2(gene_info, population, tournsize, fitnesses)
         selected_2 = tournament_selection2(gene_info, population, tournsize, fitnesses)
@@ -445,11 +447,11 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population)
     print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
 
-    log: NDArray = np.zeros(shape=(ngen + 1, 3 * len(gene_info.obj_list) + 1))
+    log: NDArray = np.zeros(shape=(ngen + 1, 3 * len(gene_info.obj_list) + 1), dtype=np.float64)
     log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness]
 
     elite = fit_series.argmin()
-    # extra_returns["elites"] = [deepcopy(population[fit_series.argmin()])]
+    # extra_returns["elites"] = [population[fit_series.argmin()].copy()]
     # elite = [deepcopy(population[fit_series.argmax()])]
 
     # Begin the generational process
@@ -467,7 +469,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series)
 
         # pop_temp = deepcopy(population)
-        population = varAnd(population, cxpb, mutpb, gene_info, cross_meth, len(population), deepcopy(population[elite]), fit_series, 5)
+        offspring = varAnd(population, cxpb, mutpb, gene_info, cross_meth, len(population), population[elite],
+                           fit_series, 5)
         # count = 0
         # for i in range(len(population)):
         #     if not np.array_equal(pop_temp[i], population[i]):
@@ -479,7 +482,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # population[len(population) - 1] = deepcopy(elite[0])
 
         # Offload SoR to table
-        fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population)
+        fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, offspring)
         print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness,
               # "Elites:", len(set([str(x.nonzero()[0]) for x in extra_returns["elites"]]))
               )
@@ -494,7 +497,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # Update elite if a new individual either has a better fitness or the same fitness
         # Need to copy not reference!!
         elite = fit_series.argmin()
-        # extra_returns["elites"].append(population[fit_series.argmin()].copy())
+        # extra_returns["elites"].append(offspring[fit_series.argmin()].copy())
         # elite = [deepcopy(population[fit_series.argmax()])]
 
         # population[fit_series.argmax()] = deepcopy(elite[0])
@@ -507,6 +510,7 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
         # Update frontier based on elite index
         # How many times the gene has been seen in the elite community
-        gene_info.frontier += population[elite]
+        gene_info.frontier += offspring[elite]
+        population = offspring
 
     return population, log, [population[elite]], extra_returns
