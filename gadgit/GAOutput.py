@@ -1,5 +1,6 @@
 from typing import List, Tuple, Any
 
+import numpy as np
 import pandas as pd
 
 from gadgit import GeneInfo, GAInfo
@@ -100,7 +101,7 @@ class GAOutput:
     def __eq__(self, other) -> bool:
         return (self.rank_pair == other.rank_pair and
                 self.missed_nodes == other.missed_nodes and
-                self.frontier == other.frontier and
+                np.array_equal(self.frontier, other.frontier) and
                 self.elite == other.elite and
                 self.genes_in_elite == other.genes_in_elite)
 
