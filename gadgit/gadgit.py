@@ -32,14 +32,16 @@ def cx_SDB(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray):
     """
 
     # Build dealer
-    intersect = np.intersect1d(ind1, ind2, assume_unique=True)
-    dealer = np.setdiff1d(np.union1d(ind1, ind2), intersect, assume_unique=True)
+    intersect = np.zeros(len(ind1), bool)
+    intersect |= ind1
+    intersect &= ind2
+    dealer = np.setdiff1d(np.nonzero(ind1 | ind2)[0], np.nonzero(intersect)[0], assume_unique=False)
     gene_info.rand.shuffle(dealer)
 
-    ind1[:len(dealer) // 2] = dealer[:len(dealer) // 2]
-    ind1[len(dealer) // 2:] = intersect
-    ind2[:len(dealer) // 2] = dealer[len(dealer) // 2:]
-    ind2[len(dealer) // 2:] = intersect
+    ind1 = intersect.copy()
+    ind1[dealer[:len(dealer) // 2]] = 1
+    ind2 = intersect.copy()
+    ind2[dealer[len(dealer) // 2:]] = 1
 
     return ind1, ind2
 
@@ -124,17 +126,9 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, 
     """
 
     cxpoint = gene_info.rand.integers(1, gene_info.gene_count - 1)
-    # ind1_new = copy(ind1)
-    # ind2_new = copy(ind2)
-    # ind1_new[cxpoint:] = copy(ind2[cxpoint:])
-    # ind2_new[cxpoint:] = copy(ind1[cxpoint:])
     ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
 
-    # ind1_new = np.append(ind1[ind1 < cxpoint], ind2[ind2 >= cxpoint])
-    # ind2_new = np.append(ind2[ind2 < cxpoint], ind1[ind1 >= cxpoint])
-
     return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
-    # return self_correction(gene_info, ind1_new), self_correction(gene_info, ind2_new)
 
 
 def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
@@ -246,7 +240,6 @@ def tournament_selection2(gene_info: GeneInfo, individuals: NDArray, tournsize: 
         tournament selection method.
     """
     aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=False)
-    # return individuals[aspirants][fitnesses[aspirants].argmin()]
     return aspirants[fitnesses[aspirants].argmin()]
 
 
@@ -360,16 +353,14 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
     for i in range(1, pop_size - 1, 2):
         selected_1 = tournament_selection2(gene_info, population, tournsize, fitnesses)
         selected_2 = tournament_selection2(gene_info, population, tournsize, fitnesses)
-        selected_1 = population[selected_1]
-        selected_2 = population[selected_2]
+        selected_1 = population[selected_1].copy()
+        selected_2 = population[selected_2].copy()
         if gene_info.rand.random() < cxpb:
-            offspring[i], offspring[i + 1] = cross_meth_func(gene_info, selected_1.copy(), selected_2.copy())
+            offspring[i], offspring[i + 1] = cross_meth_func(gene_info, selected_1, selected_2)
 
             if gene_info.rand.random() < mutpb:
                 offspring[i] = mut_flipper(gene_info, offspring[i])
                 offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1])
-                # offspring[i] = mut_flipper(gene_info, selected_1)
-                # offspring[i + 1] = mut_flipper(gene_info, selected_2)
 
         else:
             offspring[i] = selected_1
@@ -383,11 +374,10 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
         selected_1 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)]
         selected_2 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)]
         if gene_info.rand.random() < cxpb:
-            offspring[-1], _ = cross_meth_func(gene_info, selected_1.copy(), selected_2.copy())
+            offspring[-1], _ = cross_meth_func(gene_info, selected_1, selected_2)
 
             if gene_info.rand.random() < mutpb:
                 offspring[-1] = mut_flipper(gene_info, offspring[-1])
-                # offspring[-1] = mut_flipper(gene_info, selected_1)
 
         else:
             offspring[-1] = selected_1
@@ -395,7 +385,6 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
             if gene_info.rand.random() < mutpb:
                 offspring[-1] = mut_flipper(gene_info, selected_1)
 
-    # for i in range(pop_size):
     return offspring
 
 
@@ -459,80 +448,29 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     # Offload SoR to table
     fit_series: NDArray
     fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population)
-    # loo = kwargs.setdefault("loo", 0)
-    # gene_counts = np.sum(population[loo] == True)
-    # unique = len(np.unique(population))
-    # unique_individuals = len(np.unique(population, axis=0))
+
     elite = fit_series.argmin()
-    elites = {"".join([str(x) for x in np.nonzero(population[elite].copy())])}
+    # elites = {"".join([str(x) for x in np.nonzero(population[elite].copy())])}
     # loo1 = population[elite][loo]
-    print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness, "Unique:", "Elite:", len(elites))
-    # print(f"{0}, {max_fitness[0]}, {len(np.unique(population))}")
+    print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
 
-    # log: NDArray = np.zeros(shape=(ngen + 1, 3 * len(gene_info.obj_list) + 1 + 2))
-    # log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
-    logs = create_log(ngen, len(gene_info.obj_list), 1)
-    log(logs, gen, *avg_fitness, *max_fitness, *min_fitness, len(elites))
-
-    # elite = [deepcopy(population[fit_series.argmin()])]
+    logs = create_log(ngen, len(gene_info.obj_list), 0)
+    log(logs, gen, *avg_fitness, *max_fitness, *min_fitness)
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
-        # Select the next generation individuals to breed
-        # breed_pop = tournament_selection(gene_info, population, len(population) - 1, ga_info.nk, fit_series)
-        # fixed = np.zeros(gene_info.gene_count, dtype=np.bool)
-        # fixed[gene_info.fixed_list_nums] = 1
-        # for p in population:
-        #     or1 = np.bitwise_or(p, fixed)
-        #     if not np.array_equal(p, or1):
-        #         print(":(")
-        #     if p.sum() != 100:
-        #         print(":(")
-        # breed_pop = tournament_selection(gene_info, population, len(population), ga_info.nk, fit_series)
-
-        # pop_temp = deepcopy(population)
-        offspring = varAnd(population, cxpb, mutpb, gene_info, cross_meth, len(population), population[elite],
-                           fit_series, 5)
-        # count = 0
-        # for i in range(len(population)):
-        #     if not np.array_equal(pop_temp[i], population[i]):
-        #         count += 1
-        # print(count)
-        # sys.exit()
-
-        # Strict elitism
-        # population[len(population) - 1] = deepcopy(elite[0])
+        population = varAnd(population, cxpb, mutpb, gene_info, cross_meth, len(population), population[elite],
+                            fit_series, ga_info.nk)
 
         # Offload SoR to table
-        fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, offspring)
-        # loo = kwargs.setdefault("loo", 0)
-        # gene_counts = np.sum(offspring[loo] == True)
-        # unique = 0  # len(np.unique(offspring))
-        # unique_individuals = len(np.unique(offspring, axis=0))
+        fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population)
         elite = fit_series.argmin()
-        elites.add("".join([str(x) for x in np.nonzero(offspring[elite].copy())]))
-        # loo1 = offspring[elite][loo]
-        print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness, "Elite:", len(elites))
-        # print(f"{0}, {max_fitness[0]}, {len(np.unique(population))}")
+        print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
 
-        # log[gen] = [gen, *avg_fitness, *max_fitness, *min_fitness, len(np.unique(population)), gene_counts]
-        log(logs, gen, *avg_fitness, *max_fitness, *min_fitness, len(elites))
-
-        # Update elite if a new individual either has a better fitness or the same fitness
-        # Need to copy not reference!!
-        # elite = [deepcopy(population[fit_series.argmax()])]
-
-        # population[fit_series.argmax()] = deepcopy(elite[0])
-        # population[fit_series.argmin()] = deepcopy(elite[0])
-        # population = np.sort(population, axis=1)
-        # extra_returns.setdefault("elite", [])
-        # elite_list = list(elite[0])
-        # if elite_list not in extra_returns["elite"]:
-        #     extra_returns["elite"].append(elite_list)
+        log(logs, gen, *avg_fitness, *max_fitness, *min_fitness)
 
         # Update frontier based on elite index
         # How many times the gene has been seen in the elite community
-        gene_info.frontier += offspring[elite]
-        population = offspring
+        gene_info.frontier += population[elite]
 
     return population, log, [population[elite]], extra_returns
