@@ -76,7 +76,7 @@ class GeneInfo:
         # self.data_frame = self.data_frame.loc[new_index_order].reset_index(drop=True)
         # self.fixed_list_ids = [x for x in range(len(self.fixed_list))]
 
-        self.com_size = com_size - len(fixed_list)
+        self.com_size = com_size
         self.indiv_len = np.arange(self.com_size)
         self.all_genes = np.arange(self.gene_count)
         self.sum = self.data_frame[self.data_frame["GeneName"].isin(self.fixed_list)][
@@ -91,7 +91,7 @@ class GeneInfo:
             f"\tFrame path: {self.frame_path}\n"
             f"\tGene Count: {self.gene_count}\n"
             f"\tObjectives: {self.obj_list}\n"
-            f"\tCommunity size: {self.com_size + len(self.fixed_list)}\n"
+            f"\tCommunity size: {self.com_size}\n"
             f"\tFixed Genes: {self.fixed_list}\n"
             f"\tSeed: {self.seed}"
         )
