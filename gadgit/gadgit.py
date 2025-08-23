@@ -243,7 +243,7 @@ def tournament_selection2(gene_info: GeneInfo, individuals: NDArray, tournsize: 
     return aspirants[fitnesses[aspirants].argmin()]
 
 
-def _rank(array: NDArray, minimize: bool = True) -> NDArray:
+def _rank(array: NDArray, minimize: bool) -> NDArray:
     """
     Calculate 1-based dense ranks of elements in a 1D array.
 
@@ -263,12 +263,12 @@ def _rank(array: NDArray, minimize: bool = True) -> NDArray:
     if not minimize:
         inv += 1
         return np.max(inv) + 1 - inv
-    return inv  # make the ranks 1-based instead of 0-based
+    return inv + 1  # make the ranks 1-based instead of 0-based
 
 
 def multi_eval_nb(data: NDArray,
                   population: NDArray,
-                  minimize: bool = False) -> tuple[NDArray, NDArray, NDArray, NDArray]:
+                  bridging: int = -1) -> tuple[NDArray, NDArray, NDArray, NDArray]:
     """
     Evaluates and ranks a population based on given data, a fixed vector, and whether the ranking is
     maximization-oriented. The evaluation involves building raw sums for selected genes, calculating
@@ -309,7 +309,10 @@ def multi_eval_nb(data: NDArray,
     # Rank each individual based on the sum of their centralities
     sor = np.zeros_like(all_rows)
     for objective in range(num_objs):
-        ranks = _rank(all_rows[:, objective], minimize)
+        if bridging != -1 and objective == bridging:
+            ranks = _rank(all_rows[:, objective], True)
+        else:
+            ranks = _rank(all_rows[:, objective], False)
         ranks[ranks.argmin()] = 0
         if len(ranks[ranks == 1]) == 0:
             ranks = ranks - 1
