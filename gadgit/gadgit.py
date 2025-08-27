@@ -109,7 +109,7 @@ def self_correction(gene_info: GeneInfo, individual: NDArray) -> NDArray:
     return individual
 
 
-def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, NDArray]:
+def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray, cxpoint: int | None = None) -> tuple[NDArray, NDArray]:
     """
     Performs a crossover operation (CX-Operator Swap) between two individuals. This function modifies the genetic sequences
     of two parent individuals by swapping a segment of their genetic information at a randomly generated crossover point.
@@ -125,13 +125,18 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray) -> tuple[NDArray, 
         operation and subsequent self-correction.
     """
 
-    cxpoint = gene_info.rand.integers(1, gene_info.gene_count - 1)
-    ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
+    if cxpoint is None:
+        # cxpoint = gene_info.rand.integers(1, gene_info.gene_count - 1)
+        cxpoint = gene_info.rand.integers(1, gene_info.gene_count // 2 - 1)
+        cxpoint2 = gene_info.rand.integers(gene_info.gene_count // 2, gene_info.gene_count - 1)
+    # ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
+    ind1[cxpoint:cxpoint2], ind2[cxpoint:cxpoint2] = copy(ind2[cxpoint:cxpoint2]), copy(ind1[cxpoint:cxpoint2])
 
     return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
 
 
-def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
+def mut_flipper(gene_info: GeneInfo, individual: NDArray, mut_add: int | None = None,
+                mut_remove: int | None = None) -> NDArray:
     """
     Flips mutation values in a given genetic individual by identifying valid genes to
     remove and then determining valid genes to add. Updates the genetic individual
@@ -143,10 +148,14 @@ def mut_flipper(gene_info: GeneInfo, individual: NDArray) -> NDArray:
         This is modified in place based on valid mutation operations.
     :return: Updated genetic individual after performing mutations.
     """
-    add = valid_add(gene_info, individual)
-    individual[add] = 1
-    remove = valid_remove(gene_info, individual)
-    individual[remove] = 0
+    if mut_add is None:
+        add = valid_add(gene_info, individual)
+        individual[add] = 1
+        remove = valid_remove(gene_info, individual)
+        individual[remove] = 0
+    else:
+        individual[mut_add] = 1
+        individual[mut_remove] = 0
 
     return individual
 
@@ -169,7 +178,7 @@ def population_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
         individual and each column is a gene ID.
     """
     population = np.zeros(shape=(pop_size, gene_info.gene_count), dtype=np.bool)
-    valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_nums))
+    # valid_choices = list(set(range(gene_info.gene_count)) - set(gene_info.fixed_list_nums))
 
     for i in range(pop_size):
         # individual = gene_info.rand.choice(valid_choices, gene_info.com_size - len(gene_info.fixed_list), replace=False)
@@ -309,10 +318,10 @@ def multi_eval_nb(data: NDArray,
     # Rank each individual based on the sum of their centralities
     sor = np.zeros_like(all_rows)
     for objective in range(num_objs):
-        if bridging != -1 and objective == bridging:
-            ranks = _rank(all_rows[:, objective], True)
+        if bridging != -1:
+            ranks = _rank(all_rows[:, objective], objective == bridging)
         else:
-            ranks = _rank(all_rows[:, objective], False)
+            ranks = _rank(all_rows[:, objective], objective == bridging)
         ranks[ranks.argmin()] = 0
         if len(ranks[ranks == 1]) == 0:
             ranks = ranks - 1
@@ -333,7 +342,9 @@ def multi_eval_nb(data: NDArray,
 
 
 def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
-           pop_size: int, elite: NDArray, fitnesses: NDArray, tournsize: int) -> NDArray:
+           elite: NDArray, fitnesses: NDArray, tournsize: int, select_1: int | None = None,
+           select_2: int | None = None, mut_add: int | None = None, mut_remove: int | None = None,
+           cxpoint: int | None = None, immipb: float = 0.0) -> NDArray:
     """
     Apply crossover and mutation on a given population of offspring based on the provided parameters.
     The function iterates over the population, performing crossover on adjacent individuals with a
@@ -347,46 +358,57 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
     :param gene_info: Instance containing metadata and tools needed for genetic operations,
         such as randomness generator and gene structure.
     :param cross_meth_func: Function responsible for executing crossover between two individuals.
-    :param pop_size: Size of the population, indicating the number of individuals in `offspring`.
-
     :return: The modified population of individuals after applying crossover and mutation operations.
     """
     offspring = np.zeros_like(population)
     offspring[0] = elite.copy()
-    for i in range(1, pop_size - 1, 2):
-        selected_1 = tournament_selection2(gene_info, population, tournsize, fitnesses)
-        selected_2 = tournament_selection2(gene_info, population, tournsize, fitnesses)
-        selected_1 = population[selected_1].copy()
-        selected_2 = population[selected_2].copy()
-        if gene_info.rand.random() < cxpb:
-            offspring[i], offspring[i + 1] = cross_meth_func(gene_info, selected_1, selected_2)
+    for i in range(1, len(population) - 1, 2):
+        if select_1 is None:
+            selected_1 = tournament_selection2(gene_info, population, tournsize, fitnesses)
+            selected_2 = tournament_selection2(gene_info, population, tournsize, fitnesses)
+            selected_1 = population[selected_1].copy()
+            selected_2 = population[selected_2].copy()
+        else:
+            selected_1 = population[select_1].copy()
+            selected_2 = population[select_2].copy()
+        if gene_info.rand.random() < immipb:
+            offspring[i] = population_builder(gene_info, 1)[0]
+            offspring[i + 1] = population_builder(gene_info, 1)[0]
+        elif gene_info.rand.random() < cxpb:
+            offspring[i], offspring[i + 1] = cross_meth_func(gene_info, selected_1, selected_2, cxpoint)
 
             if gene_info.rand.random() < mutpb:
-                offspring[i] = mut_flipper(gene_info, offspring[i])
-                offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1])
+                offspring[i] = mut_flipper(gene_info, offspring[i], mut_add, mut_remove)
+                offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1], mut_add, mut_remove)
 
         else:
             offspring[i] = selected_1
             offspring[i + 1] = selected_2
 
             if gene_info.rand.random() < mutpb:
-                offspring[i] = mut_flipper(gene_info, selected_1)
-                offspring[i + 1] = mut_flipper(gene_info, selected_2)
+                offspring[i] = mut_flipper(gene_info, selected_1, mut_add, mut_remove)
+                offspring[i + 1] = mut_flipper(gene_info, selected_2, mut_add, mut_remove)
 
     if len(population) % 2 == 0:
-        selected_1 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)]
-        selected_2 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)]
-        if gene_info.rand.random() < cxpb:
-            offspring[-1], _ = cross_meth_func(gene_info, selected_1, selected_2)
+        if select_1 is None:
+            selected_1 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)].copy()
+            selected_2 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)].copy()
+        else:
+            selected_1 = population[select_1].copy()
+            selected_2 = population[select_2].copy()
+        if gene_info.rand.random() < immipb:
+            offspring[-1] = population_builder(gene_info, 1)[0]
+        elif gene_info.rand.random() < cxpb:
+            offspring[-1], _ = cross_meth_func(gene_info, selected_1, selected_2, cxpoint)
 
             if gene_info.rand.random() < mutpb:
-                offspring[-1] = mut_flipper(gene_info, offspring[-1])
+                offspring[-1] = mut_flipper(gene_info, offspring[-1], mut_add, mut_remove)
 
         else:
             offspring[-1] = selected_1
 
             if gene_info.rand.random() < mutpb:
-                offspring[-1] = mut_flipper(gene_info, selected_1)
+                offspring[-1] = mut_flipper(gene_info, selected_1, mut_add, mut_remove)
 
     return offspring
 
@@ -462,12 +484,13 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
-        population = varAnd(population, cxpb, mutpb, gene_info, cross_meth, len(population), population[elite],
-                            fit_series, ga_info.nk)
+        population = varAnd(population, cxpb, mutpb, gene_info, cross_meth, population[elite],
+                            fit_series, ga_info.nk, immipb=0.60)
 
         # Offload SoR to table
         fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population)
         elite = fit_series.argmin()
+        # elites.add("".join([str(x) for x in np.nonzero(population[elite].copy())]))
         print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
 
         log(logs, gen, *avg_fitness, *max_fitness, *min_fitness)
@@ -476,4 +499,4 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
         # How many times the gene has been seen in the elite community
         gene_info.frontier += population[elite]
 
-    return population, log, [population[elite]], extra_returns
+    return population, logs, [population[elite]], extra_returns
