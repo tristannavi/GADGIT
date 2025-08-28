@@ -126,11 +126,11 @@ def cx_OPS(gene_info: GeneInfo, ind1: NDArray, ind2: NDArray, cxpoint: int | Non
     """
 
     if cxpoint is None:
-        # cxpoint = gene_info.rand.integers(1, gene_info.gene_count - 1)
-        cxpoint = gene_info.rand.integers(1, gene_info.gene_count // 2 - 1)
-        cxpoint2 = gene_info.rand.integers(gene_info.gene_count // 2, gene_info.gene_count - 1)
-    # ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
-    ind1[cxpoint:cxpoint2], ind2[cxpoint:cxpoint2] = copy(ind2[cxpoint:cxpoint2]), copy(ind1[cxpoint:cxpoint2])
+        cxpoint = gene_info.rand.integers(1, gene_info.gene_count - 1)
+        # cxpoint = gene_info.rand.integers(1, gene_info.gene_count // 2 - 1)
+        # cxpoint2 = gene_info.rand.integers(gene_info.gene_count // 2, gene_info.gene_count - 1)
+    ind1[cxpoint:], ind2[cxpoint:] = copy(ind2[cxpoint:]), copy(ind1[cxpoint:])
+    # ind1[cxpoint:cxpoint2], ind2[cxpoint:cxpoint2] = copy(ind2[cxpoint:cxpoint2]), copy(ind1[cxpoint:cxpoint2])
 
     return self_correction(gene_info, ind1), self_correction(gene_info, ind2)
 
