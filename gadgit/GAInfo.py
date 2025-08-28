@@ -2,7 +2,7 @@ class GAInfo:
     """This class stores information regarding evolutionary parameters."""
 
     def __init__(self, generation: int = 100, population: int = 25, cross_chance: float = 0.75,
-                 mut_chance: float = 0.25, tourn_k: int = 3, cross_meth: str = 'sdb'):
+                 mut_chance: float = 0.25, imm_chance: float = 0.60, tourn_k: int = 3, cross_meth: str = 'sdb'):
         """Default constructor provides control over default EA parameters.
 
         See defaults inside of function header.
@@ -31,6 +31,7 @@ class GAInfo:
         self.pop = population
         self.cxpb = cross_chance
         self.mutpb = mut_chance
+        self.immpb = imm_chance
         self.nk = tourn_k
         self.cross_meth = cross_meth
 

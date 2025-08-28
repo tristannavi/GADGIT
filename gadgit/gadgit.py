@@ -190,8 +190,8 @@ def population_builder(gene_info: GeneInfo, pop_size: int) -> NDArray:
     return population
 
 
-def tournament_selection(gene_info: GeneInfo, individuals: NDArray, k: int, tournsize: int,
-                         fitnesses: NDArray, max: bool = False) -> NDArray:
+def tournament_selection(gene_info: GeneInfo, individuals: NDArray, k: int, tournament_k: int,
+                         fitness_values: NDArray) -> NDArray:
     """
     Select individuals from a population using a tournament selection process.
 
@@ -207,49 +207,16 @@ def tournament_selection(gene_info: GeneInfo, individuals: NDArray, k: int, tour
     :param individuals: Array representing the population of individuals to
         select from.
     :param k: Number of individuals to select from the population.
-    :param tournsize: Number of aspirants in each tournament.
-    :param fitnesses: Array of fitness values corresponding to the individuals.
-    :param max: Indicator for selection goal; True for maximizing fitness and
-        False for minimizing fitness. Defaults to False.
+    :param tournament_k: Number of aspirants in each tournament.
+    :param fitness_values: Array of fitness values corresponding to the individuals.
     :return: Array of selected individuals from the population based on the
         tournament selection method.
     """
     chosen = np.zeros_like(individuals)
     for i in range(k):
-        aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=False)
-        if max:
-            chosen[i] = individuals[aspirants][fitnesses[aspirants].argmax()]
-        else:
-            chosen[i] = individuals[aspirants][fitnesses[aspirants].argmin()]
+        aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournament_k, replace=False)
+        chosen[i] = individuals[aspirants][fitness_values[aspirants].argmin()]
     return chosen
-
-
-def tournament_selection2(gene_info: GeneInfo, individuals: NDArray, tournsize: int,
-                          fitnesses: NDArray) -> NDArray:
-    """
-    Select individuals from a population using a tournament selection process.
-
-    This function uses a stochastic method to select individuals from a given
-    population (individuals) based on their fitness values (fitnesses). A subset
-    of individuals (aspirants) is selected at random, and the fittest or least
-    fit individual from this subset is chosen, depending on the maximization or
-    minimization goal. The process continues until the desired number of
-    individuals (k) is selected. Forked from DEAP.
-
-    :param gene_info: Object containing a random number generator for selecting
-        aspirants.
-    :param individuals: Array representing the population of individuals to
-        select from.
-    :param k: Number of individuals to select from the population.
-    :param tournsize: Number of aspirants in each tournament.
-    :param fitnesses: Array of fitness values corresponding to the individuals.
-    :param max: Indicator for selection goal; True for maximizing fitness and
-        False for minimizing fitness. Defaults to False.
-    :return: Array of selected individuals from the population based on the
-        tournament selection method.
-    """
-    aspirants = gene_info.rand.choice(np.arange(0, len(individuals)), tournsize, replace=False)
-    return aspirants[fitnesses[aspirants].argmin()]
 
 
 def _rank(array: NDArray, minimize: bool) -> NDArray:
@@ -277,7 +244,7 @@ def _rank(array: NDArray, minimize: bool) -> NDArray:
 
 def multi_eval_nb(data: NDArray,
                   population: NDArray,
-                  bridging: int = -1) -> tuple[NDArray, NDArray, NDArray, NDArray]:
+                  maximize: list[int] = []) -> tuple[NDArray, NDArray, NDArray, NDArray]:
     """
     Evaluates and ranks a population based on given data, a fixed vector, and whether the ranking is
     maximization-oriented. The evaluation involves building raw sums for selected genes, calculating
@@ -287,11 +254,7 @@ def multi_eval_nb(data: NDArray,
         each column represents an objective.
     :param population: A Numpy 2D array where each row represents an individual in the population
         and columns correspond to the genes (selected indices into `data` for evaluation).
-    :param fixed: A Numpy 1D array containing fixed values to add to the objective scores of
-        each individual. This array must have a length equal to the number of objectives.
-    :param minimize: A boolean indicating whether the ranking should interpret higher scores as
-        better. If True, the ranking is reversed such that higher scores are better; if False,
-        lower scores are better.
+    :param maximize: A list of integers indicating which objectives should be maximized.
     :return: A Numpy 1D array where each value corresponds to the rank of the respective individual
         in the input `population`. Ranks are calculated based on combined normalized scores of
         all objectives. Ranks are in ascending order if `maximize` is False, and descending
@@ -318,10 +281,7 @@ def multi_eval_nb(data: NDArray,
     # Rank each individual based on the sum of their centralities
     sor = np.zeros_like(all_rows)
     for objective in range(num_objs):
-        if bridging != -1:
-            ranks = _rank(all_rows[:, objective], objective == bridging)
-        else:
-            ranks = _rank(all_rows[:, objective], objective == bridging)
+        ranks = _rank(all_rows[:, objective], objective in maximize)
         ranks[ranks.argmin()] = 0
         if len(ranks[ranks == 1]) == 0:
             ranks = ranks - 1
@@ -333,18 +293,12 @@ def multi_eval_nb(data: NDArray,
     # Sum all objective ranks for each individual and then rank the individuals based on those sums
     obj_sums = np.sum(sor, axis=1)
     obj_sums /= num_objs
-    # final_ranks = _rank(obj_sums)
-    final_ranks = obj_sums
 
-    return final_ranks, max_values, avg_values, min_values
-    # return final_ranks, all_rows[:, 0]
-    # return all_rows[:, 0], max_values, avg_values, min_values
+    return obj_sums, max_values, avg_values, min_values
 
 
-def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
-           elite: NDArray, fitnesses: NDArray, tournsize: int, select_1: int | None = None,
-           select_2: int | None = None, mut_add: int | None = None, mut_remove: int | None = None,
-           cxpoint: int | None = None, immipb: float = 0.0) -> NDArray:
+def variation(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
+              elite: NDArray, fitness_values: NDArray, tourn_k: int, immipb: float) -> NDArray:
     """
     Apply crossover and mutation on a given population of offspring based on the provided parameters.
     The function iterates over the population, performing crossover on adjacent individuals with a
@@ -358,57 +312,45 @@ def varAnd(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, 
     :param gene_info: Instance containing metadata and tools needed for genetic operations,
         such as randomness generator and gene structure.
     :param cross_meth_func: Function responsible for executing crossover between two individuals.
+    :param elite: The elite individual from the previous generation.
+    :param fitness_values: Array of fitness values corresponding to the individuals.
+    :param tourn_k: The number of individuals to consider in the tournament selection.
+    :param immipb: Probability of immigrating random individuals.
     :return: The modified population of individuals after applying crossover and mutation operations.
     """
     offspring = np.zeros_like(population)
+
+    # Elitism
     offspring[0] = elite.copy()
-    for i in range(1, len(population) - 1, 2):
-        if select_1 is None:
-            selected_1 = tournament_selection2(gene_info, population, tournsize, fitnesses)
-            selected_2 = tournament_selection2(gene_info, population, tournsize, fitnesses)
-            selected_1 = population[selected_1].copy()
-            selected_2 = population[selected_2].copy()
-        else:
-            selected_1 = population[select_1].copy()
-            selected_2 = population[select_2].copy()
+    chosen = tournament_selection(gene_info, population, len(population), tourn_k, fitness_values)
+
+    for i in range(1, len(offspring) - 1, 2):
         if gene_info.rand.random() < immipb:
+            # Immigration
             offspring[i] = population_builder(gene_info, 1)[0]
             offspring[i + 1] = population_builder(gene_info, 1)[0]
-        elif gene_info.rand.random() < cxpb:
-            offspring[i], offspring[i + 1] = cross_meth_func(gene_info, selected_1, selected_2, cxpoint)
+        else:
+            if gene_info.rand.random() < cxpb:
+                offspring[i], offspring[i + 1] = cross_meth_func(gene_info, chosen[i - 1], chosen[i])
+            else:
+                offspring[i] = chosen[i - 1]
+                offspring[i + 1] = chosen[i]
 
             if gene_info.rand.random() < mutpb:
-                offspring[i] = mut_flipper(gene_info, offspring[i], mut_add, mut_remove)
-                offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1], mut_add, mut_remove)
+                offspring[i] = mut_flipper(gene_info, offspring[i])
+                offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1])
 
-        else:
-            offspring[i] = selected_1
-            offspring[i + 1] = selected_2
-
-            if gene_info.rand.random() < mutpb:
-                offspring[i] = mut_flipper(gene_info, selected_1, mut_add, mut_remove)
-                offspring[i + 1] = mut_flipper(gene_info, selected_2, mut_add, mut_remove)
-
-    if len(population) % 2 == 0:
-        if select_1 is None:
-            selected_1 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)].copy()
-            selected_2 = population[tournament_selection2(gene_info, population, tournsize, fitnesses)].copy()
-        else:
-            selected_1 = population[select_1].copy()
-            selected_2 = population[select_2].copy()
+    if len(offspring) % 2 == 0:
         if gene_info.rand.random() < immipb:
             offspring[-1] = population_builder(gene_info, 1)[0]
-        elif gene_info.rand.random() < cxpb:
-            offspring[-1], _ = cross_meth_func(gene_info, selected_1, selected_2, cxpoint)
-
-            if gene_info.rand.random() < mutpb:
-                offspring[-1] = mut_flipper(gene_info, offspring[-1], mut_add, mut_remove)
-
         else:
-            offspring[-1] = selected_1
+            if gene_info.rand.random() < cxpb:
+                offspring[-1], _ = cross_meth_func(gene_info, chosen[-1], chosen[-2])
+            else:
+                offspring[-1] = chosen[-1]
 
             if gene_info.rand.random() < mutpb:
-                offspring[-1] = mut_flipper(gene_info, selected_1, mut_add, mut_remove)
+                offspring[-1] = mut_flipper(gene_info, offspring[-1])
 
     return offspring
 
@@ -484,8 +426,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
-        population = varAnd(population, cxpb, mutpb, gene_info, cross_meth, population[elite],
-                            fit_series, ga_info.nk, immipb=0.60)
+        population = variation(population, cxpb, mutpb, gene_info, cross_meth, population[elite],
+                               fit_series, ga_info.nk, ga_info.immpb)
 
         # Offload SoR to table
         fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population)
