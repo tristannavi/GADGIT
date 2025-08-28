@@ -297,6 +297,13 @@ def multi_eval_nb(data: NDArray,
     return obj_sums, max_values, avg_values, min_values
 
 
+def cull(gene_info: GeneInfo, population: NDArray, replace: float, fitness_values: NDArray) -> NDArray:
+    replace = int(replace * len(population))
+    population = population[np.argsort(fitness_values)]
+    population[-replace:] = population_builder(gene_info, replace)
+    return population
+
+
 def variation(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInfo, cross_meth_func: Callable,
               elite: NDArray, fitness_values: NDArray, tourn_k: int, immipb: float) -> NDArray:
     """
@@ -325,32 +332,32 @@ def variation(population: NDArray, cxpb: float, mutpb: float, gene_info: GeneInf
     chosen = tournament_selection(gene_info, population, len(population), tourn_k, fitness_values)
 
     for i in range(1, len(offspring) - 1, 2):
-        if gene_info.rand.random() < immipb:
-            # Immigration
-            offspring[i] = population_builder(gene_info, 1)[0]
-            offspring[i + 1] = population_builder(gene_info, 1)[0]
+        # if gene_info.rand.random() < immipb:
+        #     Immigration
+            # offspring[i] = population_builder(gene_info, 1)[0]
+            # offspring[i + 1] = population_builder(gene_info, 1)[0]
+        # else:
+        if gene_info.rand.random() < cxpb:
+            offspring[i], offspring[i + 1] = cross_meth_func(gene_info, chosen[i - 1], chosen[i])
         else:
-            if gene_info.rand.random() < cxpb:
-                offspring[i], offspring[i + 1] = cross_meth_func(gene_info, chosen[i - 1], chosen[i])
-            else:
-                offspring[i] = chosen[i - 1]
-                offspring[i + 1] = chosen[i]
+            offspring[i] = chosen[i - 1]
+            offspring[i + 1] = chosen[i]
 
-            if gene_info.rand.random() < mutpb:
-                offspring[i] = mut_flipper(gene_info, offspring[i])
-                offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1])
+        if gene_info.rand.random() < mutpb:
+            offspring[i] = mut_flipper(gene_info, offspring[i])
+            offspring[i + 1] = mut_flipper(gene_info, offspring[i + 1])
 
     if len(offspring) % 2 == 0:
-        if gene_info.rand.random() < immipb:
-            offspring[-1] = population_builder(gene_info, 1)[0]
+        # if gene_info.rand.random() < immipb:
+        #     offspring[-1] = population_builder(gene_info, 1)[0]
+        # else:
+        if gene_info.rand.random() < cxpb:
+            offspring[-1], _ = cross_meth_func(gene_info, chosen[-1], chosen[-2])
         else:
-            if gene_info.rand.random() < cxpb:
-                offspring[-1], _ = cross_meth_func(gene_info, chosen[-1], chosen[-2])
-            else:
-                offspring[-1] = chosen[-1]
+            offspring[-1] = chosen[-1]
 
-            if gene_info.rand.random() < mutpb:
-                offspring[-1] = mut_flipper(gene_info, offspring[-1])
+        if gene_info.rand.random() < mutpb:
+            offspring[-1] = mut_flipper(gene_info, offspring[-1])
 
     return offspring
 
@@ -426,6 +433,8 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
 
     # Begin the generational process
     for gen in range(1, ngen + 1):
+        if gen % 250 == 0:
+            population = cull(gene_info, population, ga_info.immpb, fit_series)
         population = variation(population, cxpb, mutpb, gene_info, cross_meth, population[elite],
                                fit_series, ga_info.nk, ga_info.immpb)
 
