@@ -423,31 +423,41 @@ def ea_sum_of_ranks(ga_info: GAInfo, gene_info: GeneInfo, population: NDArray, c
     fit_series: NDArray
     fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population)
 
-    elite = fit_series.argmin()
-    # elites = {"".join([str(x) for x in np.nonzero(population[elite].copy())])}
-    # loo1 = population[elite][loo]
-    print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
+    elite = population[fit_series.argmin()]
+    elites = {"".join([str(x) for x in np.nonzero(elite.copy())])}
+    # loo1 = population[elitete][loo]
+    print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness, len(elites))
 
     logs = create_log(ngen, len(gene_info.obj_list), 0)
     log(logs, gen, *avg_fitness, *max_fitness, *min_fitness)
 
-    # Begin the generational process
+    # try:
+        # Begin the generational process
     for gen in range(1, ngen + 1):
-        if gen % 250 == 0:
-            population = cull(gene_info, population, ga_info.immpb, fit_series)
-        population = variation(population, cxpb, mutpb, gene_info, cross_meth, population[elite],
+        # pop1 = population.copy()
+        # prev_max = max_fitness.copy()
+        # if gen % 10 == 0:
+        population = cull(gene_info, population, ga_info.immpb, fit_series)
+        # pop2 = population.copy()
+        # print(np.array_equal(pop1, population))
+        population = variation(population, cxpb, mutpb, gene_info, cross_meth, elite,
                                fit_series, ga_info.nk, ga_info.immpb)
 
         # Offload SoR to table
         fit_series, max_fitness, avg_fitness, min_fitness = multi_eval_nb(gene_info.data_numpy, population)
-        elite = fit_series.argmin()
-        # elites.add("".join([str(x) for x in np.nonzero(population[elite].copy())]))
-        print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness)
+
+        # if prev_max[0] > max_fitness[0]:
+        #     print("New Max Fitness:", max_fitness)
+        elite = population[fit_series.argmin()]
+        elites.add("".join([str(x) for x in np.nonzero(elite.copy())]))
+        print("Gen:", gen, "Avg Fitness:", avg_fitness, "Max Fitness:", max_fitness, "Min Fitness:", min_fitness, len(elites))
 
         log(logs, gen, *avg_fitness, *max_fitness, *min_fitness)
 
         # Update frontier based on elite index
         # How many times the gene has been seen in the elite community
-        gene_info.frontier += population[elite]
+        gene_info.frontier += elite
+    # except KeyboardInterrupt:
+    #     return population, logs, [elite], extra_returns
 
-    return population, logs, [population[elite]], extra_returns
+    return population, logs, [elite], extra_returns
